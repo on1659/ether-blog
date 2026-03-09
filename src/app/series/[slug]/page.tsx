@@ -14,7 +14,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const series = await prisma.series.findUnique({
     where: { slug },
     select: { title: true },
-  });
+  }).catch(() => null);
   if (!series) return { title: "Not Found" };
   return { title: series.title };
 };
@@ -36,7 +36,7 @@ const SeriesDetailPage = async ({ params }: PageProps) => {
         },
       },
     },
-  });
+  }).catch(() => null);
 
   if (!series) notFound();
 

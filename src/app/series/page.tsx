@@ -10,7 +10,7 @@ const SeriesPage = async () => {
   const seriesList = await prisma.series.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { posts: true } } },
-  });
+  }).catch(() => []);
 
   return (
     <div className="mx-auto max-w-container px-8 py-12">

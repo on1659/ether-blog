@@ -1,7 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const client = new OpenAI({
+  apiKey: process.env.Z_AI_API_KEY,
+  baseURL: "https://chat.z.ai/api",
 });
 
 const SYSTEM_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그 글 작성자입니다.
@@ -91,11 +92,11 @@ export const generateBlogContent = async ({
     systemPrompt += "\n\n## Language\n\nWrite in English. Natural, conversational tone.";
   }
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const response = await client.chat.completions.create({
+    model: "glm-4",
     max_tokens: 8000,
-    system: systemPrompt,
     messages: [
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: `레포: ${repoName}
@@ -110,7 +111,7 @@ ${filesSummary}
     ],
   });
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "";
+  const text = response.choices[0]?.message?.content ?? "";
 
   // JSON 추출 (코드블록 감싸진 경우 처리)
   const jsonMatch = text.match(/\{[\s\S]*\}/);

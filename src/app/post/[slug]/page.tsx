@@ -23,7 +23,7 @@ export const generateMetadata = async ({
   const post = await prisma.post.findUnique({
     where: { slug },
     select: { title: true, excerpt: true, category: true },
-  });
+  }).catch(() => null);
 
   if (!post) return { title: "Not Found" };
 
@@ -42,7 +42,7 @@ const PostPage = async ({ params }: PageProps) => {
   const { slug } = await params;
   const post = await prisma.post.findUnique({
     where: { slug },
-  });
+  }).catch(() => null);
 
   if (!post || !post.published) notFound();
 

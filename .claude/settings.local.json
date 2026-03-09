@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(mv:*)",
-      "Bash(npx create-next-app@latest:*)"
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(railway version)",
+      "Bash(railway --help)",
+      "Bash(railway add --help)",
+      "Bash(railway variable)",
+      "Bash(railway variable --json)",
+      "Bash(railway service link)",
+      "Bash(railway service link Postgres)",
+      "Bash(railway variable set \"NEXTAUTH_SECRET=GpT4PklH9Jjq5jUgc956fgYPG/Ccws71ZTR+uKGk4FM=\" \"ADMIN_GITHUB_ID=on1659\" \"Z_AI_API_KEY=17ee9ffbce8d401a9b7af7c31b208d17.w6y99aF87u4aQD2n\" \"NEXTAUTH_URL=https://ether-blog.railway.app\")"
     ]
   }
 }

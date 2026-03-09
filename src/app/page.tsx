@@ -9,46 +9,50 @@ import { prisma } from "@/lib/prisma";
 import type { Category } from "@/types";
 
 const getPosts = async (category?: string) => {
-  const where: Record<string, unknown> = { published: true };
-  if (category && category !== "all") {
-    where.category = category as Category;
+  try {
+    const where: Record<string, unknown> = { published: true };
+    if (category && category !== "all") {
+      where.category = category as Category;
+    }
+
+    const posts = await prisma.post.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        subtitle: true,
+        excerpt: true,
+        category: true,
+        coverImage: true,
+        tags: true,
+        readingTime: true,
+        createdAt: true,
+        published: true,
+        featured: true,
+        commitHash: true,
+        commitUrl: true,
+        repoName: true,
+        filesChanged: true,
+      },
+    });
+
+    return posts.map((p) => ({
+      ...p,
+      createdAt: p.createdAt.toISOString(),
+      subtitle: p.subtitle ?? undefined,
+      excerpt: p.excerpt ?? undefined,
+      coverImage: p.coverImage ?? undefined,
+      commitHash: p.commitHash ?? undefined,
+      commitUrl: p.commitUrl ?? undefined,
+      repoName: p.repoName ?? undefined,
+      filesChanged: p.filesChanged ?? undefined,
+    }));
+  } catch {
+    return [];
   }
-
-  const posts = await prisma.post.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      subtitle: true,
-      excerpt: true,
-      category: true,
-      coverImage: true,
-      tags: true,
-      readingTime: true,
-      createdAt: true,
-      published: true,
-      featured: true,
-      commitHash: true,
-      commitUrl: true,
-      repoName: true,
-      filesChanged: true,
-    },
-  });
-
-  return posts.map((p) => ({
-    ...p,
-    createdAt: p.createdAt.toISOString(),
-    subtitle: p.subtitle ?? undefined,
-    excerpt: p.excerpt ?? undefined,
-    coverImage: p.coverImage ?? undefined,
-    commitHash: p.commitHash ?? undefined,
-    commitUrl: p.commitUrl ?? undefined,
-    repoName: p.repoName ?? undefined,
-    filesChanged: p.filesChanged ?? undefined,
-  }));
 };
 
 const Home = async ({

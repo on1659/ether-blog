@@ -29,7 +29,7 @@ const ProjectCommitsPage = async ({ params }: PageProps) => {
       createdAt: true, published: true, featured: true,
       commitHash: true, commitUrl: true, repoName: true, filesChanged: true,
     },
-  });
+  }).catch(() => []);
 
   const mapped = posts.map((p) => ({
     ...p,

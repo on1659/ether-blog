@@ -18,7 +18,7 @@ const CommitsPage = async () => {
       commitHash: true, commitUrl: true, repoName: true, filesChanged: true,
       projectSlug: true,
     },
-  });
+  }).catch(() => []);
 
   // 프로젝트별 그룹핑
   const projects = [...new Set(posts.map((p) => p.repoName).filter(Boolean))];
