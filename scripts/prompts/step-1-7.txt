@@ -1,0 +1,12 @@
+카테고리별 페이지를 만들어줘. 메인 페이지와 같은 PostList를 재사용하되 카테고리가 고정.
+
+1. app/commits/page.tsx — category=COMMITS 고정 필터 + 프로젝트별 서브 필터
+2. app/commits/[project]/page.tsx — 특정 프로젝트의 커밋 글 목록
+3. app/articles/page.tsx — category=ARTICLES
+4. app/techlab/page.tsx — category=TECHLAB + 실험 상태 필터 (진행중/완료/보류)
+5. app/casual/page.tsx — category=CASUAL
+
+commits 페이지는 프로젝트별 그룹핑이 핵심:
+- 상단에 프로젝트 목록 (WatchedRepo에서 가져오기)
+- 프로젝트 선택 시 해당 프로젝트 커밋만 필터
+- 프로젝트별 상세 페이지에서는 타임라인처럼 커밋 히스토리 표시

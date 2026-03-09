@@ -1,0 +1,15 @@
+Railway 배포 설정을 만들어줘.
+
+1. Dockerfile:
+   - Node.js 20 alpine 베이스
+   - pnpm 사용
+   - multi-stage build (builder → runner)
+   - prisma generate + next build
+   - 포트 3000 노출
+2. railway.toml 또는 nixpacks 설정
+3. 환경변수 목록 정리 (.env.example 업데이트)
+4. prisma migrate deploy 자동 실행 (시작 스크립트에 포함)
+5. next.config.ts:
+   - output: "standalone" (Docker 최적화)
+   - images: remotePatterns 설정
+6. health check 엔드포인트: /api/health

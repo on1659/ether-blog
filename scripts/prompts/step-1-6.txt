@@ -1,0 +1,26 @@
+글 상세 페이지를 만들어줘. docs/ether-blog-mockup-v2.html 목업의 글 상세와 동일하게.
+
+1. app/post/[slug]/page.tsx:
+   - Prisma에서 slug로 글 조회
+   - generateMetadata로 SEO 메타 태그
+   - 조회수 카운트 (Analytics 모델)
+2. components/post/PostDetail.tsx:
+   - 상단: 카테고리 배지 + 제목(H1) + 부제목
+   - 작성자 아바타(그라데이션 원) + 이름 + 날짜 + 읽기시간
+   - 구분선
+3. 본문 렌더링 (lib/markdown.ts):
+   - next-mdx-remote로 마크다운 → React 변환
+   - rehype-pretty-code + shiki (One Dark Pro 테마) 코드 하이라이트
+   - remark-gfm (테이블, 취소선 등)
+   - 커스텀 컴포넌트: h2/h3에 id 부여 (TOC용), code 인라인 스타일, blockquote 스타일
+4. components/post/TableOfContents.tsx ("use client"):
+   - 우측 sticky (top: 112px)
+   - h2/h3 헤딩 자동 추출
+   - IntersectionObserver로 현재 섹션 하이라이트
+   - 클릭 시 smooth scroll
+   - 1024px 이하에서 숨김
+5. 태그 목록 (하단)
+6. components/post/PostNav.tsx — 이전/다음 글 카드
+7. Giscus 댓글 컴포넌트 (script 태그 또는 @giscus/react)
+
+@tailwindcss/typography의 prose 클래스를 기반으로 하되, DESIGN_SYSTEM.md의 타이포 규칙에 맞게 커스텀.

@@ -1,0 +1,14 @@
+소개 페이지를 만들어줘. docs/ether-blog-mockup-v2.html 목업의 About 페이지와 동일하게.
+
+app/about/page.tsx:
+1. 다크 히어로 섹션:
+   - 아바타 (그라데이션 원 + "E")
+   - "이더" + "UE5 C++ 게임 프로그래머" + "AI × 사이드프로젝트 빌더"
+   - GitHub, Email, RSS 버튼 (아웃라인 스타일, 다크 배경 위)
+2. 본문 섹션 (max-width: 720px):
+   - "소개" — 자기소개 텍스트 (목업 내용 그대로)
+   - "프로젝트" — 2열 그리드 프로젝트 카드 (LAMDiceBot, git2blog, wedding-invitation, GameForge)
+     - 각 카드: 아이콘(그라데이션 원) + 이름 + 설명 + 기술스택 태그
+   - "기술 스택" — 뱃지 리스트 (hover 시 accent 색)
+
+소개 텍스트와 프로젝트 데이터는 config/site.ts에 정의해서 관리.

@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Light Mode (기본) ===== */
+:root {
+  /* 배경 */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F8FA;
+  --bg-tertiary: #ECEEF1;
+
+  /* 텍스트 */
+  --text-primary: #1B1D1F;
+  --text-secondary: #4E5968;
+  --text-tertiary: #8B95A1;
+  --text-muted: #B0B8C1;
+
+  /* 브랜드 */
+  --brand-primary: #3182F6;
+  --brand-primary-light: rgba(49, 130, 246, 0.12);
+  --brand-primary-dark: #1D4ED8;
+
+  /* 카테고리 */
+  --cat-commits: #00C471;
+  --cat-articles: #3182F6;
+  --cat-techlab: #8B5CF6;
+  --cat-casual: #FF6B35;
+
+  /* 코드 블록 */
+  --code-bg: #191A1C;
+  --code-text: #D1D5DB;
+
+  /* 보더 */
+  --border: #E5E8EB;
+  --border-light: #F2F4F6;
+
+  /* 카드 */
+  --card-bg: #FFFFFF;
+  --card-hover: #F7F8FA;
+
+  /* 트랜지션 */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* ===== Dark Mode ===== */
+.dark {
+  --bg-primary: #1B1D1F;
+  --bg-secondary: #212325;
+  --bg-tertiary: #2B2D31;
+
+  --text-primary: #ECECEC;
+  --text-secondary: #B0B8C1;
+  --text-tertiary: #6B7684;
+  --text-muted: #4E5968;
+
+  --brand-primary: #60A5FA;
+  --brand-primary-light: #1E3A5F;
+  --brand-primary-dark: #93C5FD;
+
+  --code-bg: #0F1012;
+  --code-text: #E6EDF3;
+
+  --border: #333538;
+  --border-light: #28292B;
+
+  --card-bg: #212325;
+  --card-hover: #2B2D31;
+}
+
+/* ===== Base Styles ===== */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary font-body;
+    font-size: 1.0625rem;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 다크모드 전환 트랜지션 */
+  body,
+  body * {
+    transition: background-color var(--transition-slow),
+                color var(--transition-slow),
+                border-color var(--transition-slow);
+  }
+
+  /* 접근성: focus-visible */
+  *:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+
+  /* 모션 감소 대응 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ===== 코드 블록 스타일 ===== */
+@layer components {
+  .code-block {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: var(--font-code);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    position: relative;
+  }
+
+  .code-block .lang-label {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .code-block .copy-button {
+    position: absolute;
+    top: 8px;
+    right: 60px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .code-block:hover .copy-button {
+    opacity: 1;
+  }
+}
+
+/* ===== 스크롤바 스타일 ===== */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-muted) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--text-muted);
+    border-radius: 3px;
+  }
+}

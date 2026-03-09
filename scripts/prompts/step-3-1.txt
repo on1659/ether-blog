@@ -1,0 +1,25 @@
+먼저 Phase 3에 필요한 패키지를 설치해줘:
+  npm install recharts
+
+통계 페이지를 만들어줘.
+
+두 가지 방식 병행:
+A) 내부 간단 트래킹:
+   - 글 조회 시 Analytics 모델에 기록 (postId, referrer, userAgent, timestamp)
+   - middleware.ts에서 /post/ 경로 접근 시 자동 기록
+
+B) Umami 연동:
+   - Umami 스크립트 태그를 layout.tsx에 추가
+   - 환경변수: NEXT_PUBLIC_UMAMI_WEBSITE_ID, NEXT_PUBLIC_UMAMI_URL
+
+app/admin/analytics/page.tsx:
+1. 내부 데이터 기반:
+   - 글별 조회수 랭킹 (Top 10)
+   - 카테고리별 조회수 비교
+   - 최근 7일/30일 일별 조회수 차트 (간단한 bar chart, recharts 또는 순수 CSS)
+2. Umami 임베드 (iframe 또는 API):
+   - 방문자 수 (UV/PV)
+   - 유입 경로
+   - 인기 페이지
+
+recharts를 사용해서 차트를 그려줘. 심플하게.

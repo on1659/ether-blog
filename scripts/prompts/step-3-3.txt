@@ -1,0 +1,11 @@
+한영 전환 기능을 만들어줘.
+
+1. Post 모델에 이미 locale 필드가 있음 (ko/en)
+2. 같은 slug에 locale만 다른 글 쌍으로 연결
+   - 글 상세 페이지에서 "🌐 English" / "🌐 한국어" 전환 링크
+3. 메인 피드에서는 현재 선택된 언어의 글만 표시
+4. 언어 선택: 쿠키 또는 URL 파라미터 (?lang=en)
+5. AI 글 생성 시 한영 동시 생성 옵션:
+   - generate-post.ts에 영어 버전 생성 로직 추가
+   - BLOG_REQUIREMENTS.md 부록의 글 생성 규칙 기반 + 영어 독자 관점으로 재작성
+6. UI 텍스트 i18n은 최소화 (nav, footer 정도만)

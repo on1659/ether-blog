@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  content     String
+  excerpt     String?
+  category    Category
+  coverImage  String?
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  readingTime Int      @default(0)
+  tags        String[]
+  locale      String   @default("ko")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Commit 관련 필드
+  commitHash       String?
+  commitUrl        String?
+  repoName         String?
+  projectSlug      String?
+  filesChanged     Int?
+
+  // 시리즈 관련
+  series      Series?  @relation(fields: [seriesId], references: [id])
+  seriesId    String?
+  seriesOrder Int?
+
+  // 조회수
+  analytics   Analytics[]
+
+  @@index([category])
+  @@index([published])
+  @@index([createdAt])
+  @@index([projectSlug])
+}
+
+model Series {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  posts       Post[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  lastUsed  DateTime?
+}
+
+model WatchedRepo {
+  id              String   @id @default(cuid())
+  owner           String
+  name            String
+  branch          String   @default("main")
+  active          Boolean  @default(true)
+  autoPublish     Boolean  @default(false)
+  promptTemplate  String?
+  categoryMapping String?
+  createdAt       DateTime @default(now())
+
+  @@unique([owner, name])
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  views     Int      @default(1)
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([createdAt])
+}
+
+enum Category {
+  commits
+  articles
+  techlab
+  casual
+}

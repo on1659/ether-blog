@@ -1,0 +1,8 @@
+NextAuth.js (Auth.js v5) 설정해줘.
+
+- GitHub OAuth provider
+- 관리자 체크: ADMIN_GITHUB_ID 환경변수와 로그인한 사용자의 GitHub username 비교
+- lib/auth.ts에 설정 파일
+- app/api/auth/[...nextauth]/route.ts 생성
+- 관리자 세션에 isAdmin: boolean 포함
+- 미들웨어: /admin 경로는 관리자만 접근 가능

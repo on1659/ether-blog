@@ -1,0 +1,18 @@
+전역 레이아웃을 만들어줘. ether-blog-mockup-v2.html을 참고해서 정확한 디자인으로.
+
+1. app/layout.tsx — ThemeProvider(next-themes) + NavBar + Footer + 메타데이터
+2. components/layout/NavBar.tsx:
+   - "이더.dev" 로고 (점에 accent 색)
+   - Blog, Projects, About 링크
+   - 검색 아이콘 버튼, 다크모드 토글
+   - 모바일: 햄버거 메뉴
+   - sticky, 하단 보더 구분선
+3. components/layout/Footer.tsx:
+   - 카카오테크 스타일 사이트맵 푸터
+   - 왼쪽: 로고 + 카피라이트
+   - 오른쪽: Links, Categories 컬럼
+4. components/layout/ThemeToggle.tsx:
+   - Sun/Moon 아이콘 전환
+   - 시스템 설정 감지 + 수동 토글
+
+목업 HTML의 CSS를 Tailwind 클래스로 변환해서 만들어줘. 색상은 CSS 변수 참조.

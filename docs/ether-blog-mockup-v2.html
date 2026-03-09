@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이더 — 테크블로그 목업 v2</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ========== VARIABLES ========== */
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F8FA;
+  --bg-tertiary: #ECEEF1;
+  --bg-hero: #1B1D1F;
+  --text-primary: #1B1D1F;
+  --text-secondary: #4E5968;
+  --text-tertiary: #8B95A1;
+  --text-muted: #B0B8C1;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-sub: rgba(255,255,255,0.7);
+  --brand: #FEE500; /* 카카오 옐로우 영감 → 개인 브랜딩으로 변형 */
+  --accent: #3182F6; /* 토스 블루 계열 — 깔끔한 포인트 */
+  --cat-commits: #00C471;
+  --cat-articles: #3182F6;
+  --cat-techlab: #8B5CF6;
+  --cat-casual: #FF6B35;
+  --code-bg: #191A1C;
+  --code-text: #D1D5DB;
+  --border: #E5E8EB;
+  --border-light: #F2F4F6;
+  --card-bg: #FFFFFF;
+  --card-hover: #F7F8FA;
+  --font-body: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-code: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --transition: 0.2s ease;
+  --max-width: 1100px;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1B1D1F;
+  --bg-secondary: #212325;
+  --bg-tertiary: #2B2D31;
+  --bg-hero: #0F1012;
+  --text-primary: #ECECEC;
+  --text-secondary: #B0B8C1;
+  --text-tertiary: #6B7684;
+  --text-muted: #4E5968;
+  --border: #333538;
+  --border-light: #28292B;
+  --card-bg: #212325;
+  --card-hover: #2B2D31;
+  --code-bg: #0F1012;
+}
+
+/* ========== RESET ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--transition), color var(--transition);
+}
+
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ========== MOCKUP SWITCHER ========== */
+.mockup-bar {
+  background: #1B1D1F;
+  color: #FFF;
+  text-align: center;
+  padding: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.mockup-bar .switches {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 16px;
+}
+
+.mockup-bar button {
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.mockup-bar button:hover { border-color: rgba(255,255,255,0.5); color: #FFF; }
+.mockup-bar button.active { background: #FFF; color: #1B1D1F; border-color: #FFF; }
+
+/* ========== NAVBAR — kakao tech style ========== */
+.navbar {
+  position: sticky;
+  top: 38px;
+  z-index: 100;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.navbar-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-logo {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.nav-logo span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-link {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.nav-link:hover { color: var(--text-primary); background: var(--bg-secondary); }
+.nav-link.active { color: var(--text-primary); font-weight: 600; }
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--transition);
+}
+
+.nav-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+/* ========== HERO — kakao tech dark banner style ========== */
+.hero {
+  background: var(--bg-hero);
+  padding: 80px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -20%;
+  width: 140%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(49,130,246,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(139,92,246,0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.hero-content { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+
+.hero h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-on-dark);
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+}
+
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, #3182F6, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero p {
+  font-size: 1.0625rem;
+  color: var(--text-on-dark-sub);
+  line-height: 1.7;
+}
+
+/* ========== SECTION HEADER ========== */
+.section-header {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 48px 32px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.section-more {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.section-more:hover { color: var(--accent); }
+
+/* ========== CATEGORY FILTER (tech.kakao.com style — minimal) ========== */
+.filter-strip {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 32px 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  padding: 6px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-tertiary);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.filter-chip:hover { border-color: var(--text-tertiary); color: var(--text-secondary); }
+.filter-chip.active { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
+
+/* ========== POST LIST — horizontal cards (tech.kakao.com style) ========== */
+.post-list {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.post-item {
+  display: flex;
+  gap: 28px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: background var(--transition);
+  border-radius: var(--radius-md);
+}
+
+.post-item:hover { background: var(--card-hover); margin: 0 -16px; padding: 28px 16px; }
+.post-item:last-child { border-bottom: none; }
+
+.post-thumb {
+  width: 200px;
+  height: 130px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.post-thumb-gradient {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+}
+
+.thumb-icon {
+  font-size: 0.75rem;
+  font-family: var(--font-code);
+  color: rgba(255,255,255,0.6);
+}
+
+.grad-commits { background: linear-gradient(135deg, #0D503B, #00C471); }
+.grad-articles { background: linear-gradient(135deg, #1A3A6B, #3182F6); }
+.grad-techlab { background: linear-gradient(135deg, #3B1A6E, #8B5CF6); }
+.grad-casual { background: linear-gradient(135deg, #6B2A10, #FF6B35); }
+
+.post-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.post-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.post-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.badge-commits { background: rgba(0,196,113,0.12); color: #00C471; }
+.badge-articles { background: rgba(49,130,246,0.12); color: #3182F6; }
+.badge-techlab { background: rgba(139,92,246,0.12); color: #8B5CF6; }
+.badge-casual { background: rgba(255,107,53,0.12); color: #FF6B35; }
+
+.post-project-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+}
+
+.post-item-title {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.post-item-desc {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.post-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.meta-dot { width: 2px; height: 2px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+
+.post-item-tags {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.item-tag {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 700px) {
+  .post-item { flex-direction: column; gap: 16px; }
+  .post-thumb { width: 100%; height: 180px; }
+}
+
+/* ========== POST DETAIL ========== */
+.page { display: none; }
+.page.show { display: block; }
+.page-main { display: block; }
+.page-main.hide { display: none; }
+
+.detail-header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 56px 32px 0;
+}
+
+.detail-badge-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.detail-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+
+.detail-subtitle {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 28px;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-author-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #8B5CF6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #FFF;
+  flex-shrink: 0;
+}
+
+.detail-author-info { line-height: 1.4; }
+.detail-author-name { font-weight: 600; color: var(--text-primary); font-size: 0.9375rem; }
+
+/* Content area with TOC */
+.detail-content-wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 48px;
+}
+
+.detail-body {
+  max-width: 720px;
+  flex: 1;
+  padding-top: 40px;
+  padding-bottom: 80px;
+}
+
+.detail-body h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 3rem 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.detail-body h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 2rem 0 0.75rem;
+}
+
+.detail-body p {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.detail-body strong { color: var(--text-primary); }
+
+.detail-body code.il {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  color: var(--accent);
+}
+
+.detail-body pre {
+  background: var(--code-bg);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin: 1.5rem 0 2rem;
+  overflow-x: auto;
+  position: relative;
+}
+
+.detail-body pre code {
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--code-text);
+}
+
+.detail-body pre .lang {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  color: #6B7684;
+  text-transform: uppercase;
+}
+
+.detail-body blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 2rem 0;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.detail-body blockquote p {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 0;
+}
+
+.detail-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-tag {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.detail-tag:hover { border-color: var(--accent); color: var(--accent); }
+
+/* TOC sidebar */
+.detail-toc {
+  width: 200px;
+  flex-shrink: 0;
+  padding-top: 56px;
+  position: sticky;
+  top: 112px;
+  align-self: flex-start;
+}
+
+.toc-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+.toc-item {
+  display: block;
+  padding: 5px 0 5px 14px;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  border-left: 2px solid var(--border-light);
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.toc-item:hover { color: var(--text-primary); }
+.toc-item.on { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
+
+@media (max-width: 1024px) {
+  .detail-toc { display: none; }
+}
+
+/* Post navigation */
+.detail-nav {
+  max-width: 720px;
+  margin: 0 auto 48px;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.detail-nav-item {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.detail-nav-item:hover { border-color: var(--accent); }
+.detail-nav-item.right { text-align: right; }
+
+.detail-nav-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.detail-nav-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Comments */
+.detail-comments {
+  max-width: 720px;
+  margin: 0 auto 80px;
+  padding: 0 32px;
+}
+
+.comments-box {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* ========== ABOUT PAGE ========== */
+.about-hero-section {
+  background: var(--bg-hero);
+  padding: 72px 32px;
+  text-align: center;
+}
+
+.about-avatar-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3182F6, #8B5CF6);
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #FFF;
+}
+
+.about-hero-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #FFF;
+  margin-bottom: 6px;
+}
+
+.about-hero-role {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.about-hero-sub {
+  font-size: 0.9375rem;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 28px;
+}
+
+.about-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.about-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.about-link-btn:hover { border-color: rgba(255,255,255,0.5); color: #FFF; }
+
+.about-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 32px 80px;
+}
+
+.about-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+.about-paragraph {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--text-secondary);
+  margin-bottom: 48px;
+}
+
+.about-projects {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 600px) {
+  .about-projects { grid-template-columns: 1fr; }
+}
+
+.about-proj-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition);
+}
+
+.about-proj-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+.proj-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #FFF;
+  margin-bottom: 12px;
+}
+
+.proj-name { font-size: 0.9375rem; font-weight: 600; margin-bottom: 4px; }
+
+.proj-desc {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.proj-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.proj-tag {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+}
+
+.about-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+
+.stack-item {
+  padding: 7px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  cursor: default;
+}
+
+.stack-item:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ========== FOOTER ========== */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 32px;
+}
+
+.footer-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.footer-brand {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.footer-brand span { color: var(--accent); }
+
+.footer-copy {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-col-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.footer-col a {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+  transition: color var(--transition);
+}
+
+.footer-col a:hover { color: var(--accent); }
+
+@media (max-width: 700px) {
+  .footer-inner { flex-direction: column; gap: 32px; }
+  .footer-links { flex-direction: column; gap: 24px; }
+  .hero h1 { font-size: 1.5rem; }
+  .detail-title { font-size: 1.75rem; }
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Mockup Switcher -->
+<div class="mockup-bar">
+  MOCKUP v2 — tech.kakao.com 스타일
+  <span class="switches">
+    <button class="active" onclick="go('main')">메인</button>
+    <button onclick="go('detail')">글 상세</button>
+    <button onclick="go('about')">소개</button>
+  </span>
+</div>
+
+<!-- ========== NAVBAR ========== -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="nav-left">
+      <div class="nav-logo" onclick="go('main')">이더<span>.</span>dev</div>
+      <div class="nav-links">
+        <a class="nav-link active">Blog</a>
+        <a class="nav-link">Projects</a>
+        <a class="nav-link" onclick="go('about')">About</a>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button class="nav-btn" title="검색">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+      <button class="nav-btn" title="다크모드" onclick="toggleTheme()">
+        <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ========== MAIN PAGE ========== -->
+<div class="page-main" id="pg-main">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-content">
+      <h1>코드를 쓰면, <em>글이 된다.</em></h1>
+      <p>GitHub에 커밋하면 AI가 블로그 글을 자동으로 생성합니다.<br>게임 프로그래머의 AI × 사이드프로젝트 개발 기록.</p>
+    </div>
+  </div>
+
+  <!-- Section: 최근 게시물 -->
+  <div class="section-header">
+    <h2 class="section-title">최근 게시물</h2>
+    <span class="section-more">전체보기 →</span>
+  </div>
+
+  <!-- Category Filter -->
+  <div class="filter-strip">
+    <button class="filter-chip active" onclick="filterChip(this)">전체</button>
+    <button class="filter-chip" onclick="filterChip(this)">Commits</button>
+    <button class="filter-chip" onclick="filterChip(this)">Articles</button>
+    <button class="filter-chip" onclick="filterChip(this)">Tech Lab</button>
+    <button class="filter-chip" onclick="filterChip(this)">Casual</button>
+  </div>
+
+  <!-- Post List -->
+  <div class="post-list">
+
+    <!-- Item 1: Commit -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-commits">
+          <span class="thumb-icon">LAMDiceBot</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-commits">commits</span>
+          <span class="post-project-name">LAMDiceBot · a1b2c3d</span>
+        </div>
+        <h3 class="post-item-title">Socket.IO 팀 배정 로직 리팩토링 — Map 기반 O(1) 탐색으로 전환</h3>
+        <p class="post-item-desc">기존 배열 순회 방식의 팀 배정 로직을 Map 자료구조로 전환했다. 100명 동시 접속 기준으로 배정 시간이 120ms에서 3ms로 줄었다.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.03.09</span>
+          <span class="meta-dot"></span>
+          <span>5 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">Socket.IO</span>
+            <span class="item-tag">리팩토링</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item 2: Article -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-articles">
+          <span class="thumb-icon">git2blog</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-articles">articles</span>
+        </div>
+        <h3 class="post-item-title">GitHub 커밋을 블로그 글로 자동 변환하는 파이프라인 만들기</h3>
+        <p class="post-item-desc">커밋 로그를 Claude API로 분석해서 기술 블로그 글을 자동 생성하는 시스템을 구축했다. Webhook부터 발행까지 전 과정을 정리한다.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.03.07</span>
+          <span class="meta-dot"></span>
+          <span>12 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">AI</span>
+            <span class="item-tag">Claude</span>
+            <span class="item-tag">자동화</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item 3: Tech Lab -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-techlab">
+          <span class="thumb-icon">experiment</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-techlab">tech lab</span>
+          <span style="font-size:0.6875rem;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,0.1);color:#8B5CF6;">진행중</span>
+        </div>
+        <h3 class="post-item-title">Strix Halo 미니PC에서 로컬 LLM 추론 벤치마크 — Llama 3.1 70B 실험</h3>
+        <p class="post-item-desc">GMKtec EVO-X2에 96GB 통합 메모리를 활용해서 Llama 3.1 70B를 로컬에서 돌려봤다. 토큰 생성 속도와 전력 소비를 API 호출과 비교.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.03.05</span>
+          <span class="meta-dot"></span>
+          <span>15 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">로컬LLM</span>
+            <span class="item-tag">벤치마크</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item 4: Casual -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-casual">
+          <span class="thumb-icon">casual</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-casual">casual</span>
+        </div>
+        <h3 class="post-item-title">한강 라이딩하다 든 생각 — 게임 프로그래머가 AI를 하는 이유</h3>
+        <p class="post-item-desc">퇴근 후 라피에르 타고 한강을 달리면서 정리한 생각들. 왜 안정적인 게임 개발을 두고 사이드로 AI를 파는지.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.03.03</span>
+          <span class="meta-dot"></span>
+          <span>4 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">회고</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item 5: Commit -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-commits">
+          <span class="thumb-icon">wedding-invitation</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-commits">commits</span>
+          <span class="post-project-name">wedding-invitation · f4e5d6c</span>
+        </div>
+        <h3 class="post-item-title">드래그앤드롭 사진 업로드 + 테마 커스터마이징 구현</h3>
+        <p class="post-item-desc">모바일 청첩장에 사진 업로드 기능을 추가했다. react-dnd-kit으로 순서 변경까지 지원하고, 테마 컬러를 실시간으로 미리볼 수 있게 했다.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.03.01</span>
+          <span class="meta-dot"></span>
+          <span>6 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">React</span>
+            <span class="item-tag">DnD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item 6: Article -->
+    <div class="post-item" onclick="go('detail')">
+      <div class="post-thumb">
+        <div class="post-thumb-gradient grad-articles">
+          <span class="thumb-icon">Claude Code</span>
+        </div>
+      </div>
+      <div class="post-info">
+        <div class="post-badge-row">
+          <span class="post-badge badge-articles">articles</span>
+        </div>
+        <h3 class="post-item-title">Claude Code 실전 워크플로우 — CLAUDE.md 최적화부터 대형 파일 분리까지</h3>
+        <p class="post-item-desc">LAMDiceBot 개발에 Claude Code를 6개월 쓰면서 쌓인 노하우. dangerously-skip-permissions 플래그의 진짜 의미와 효율적인 작업 규칙.</p>
+        <div class="post-item-meta">
+          <span>이더</span>
+          <span class="meta-dot"></span>
+          <span>2026.02.28</span>
+          <span class="meta-dot"></span>
+          <span>10 min read</span>
+          <div class="post-item-tags">
+            <span class="item-tag">Claude Code</span>
+            <span class="item-tag">DX</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== POST DETAIL PAGE ========== -->
+<div class="page" id="pg-detail">
+
+  <div class="detail-header">
+    <div class="detail-badge-row">
+      <span class="post-badge badge-articles">articles</span>
+    </div>
+    <h1 class="detail-title">GitHub 커밋을 블로그 글로 자동 변환하는 파이프라인 만들기</h1>
+    <p class="detail-subtitle">Webhook → Claude API → 자동 발행까지, 삽질 포함 전체 과정</p>
+    <div class="detail-meta">
+      <div class="detail-author-avatar">E</div>
+      <div class="detail-author-info">
+        <div class="detail-author-name">이더</div>
+        <div>2026.03.07 · 12 min read</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-content-wrap">
+    <article class="detail-body">
+
+      <p>코드를 쓰고 나면 그걸 정리해서 글로 쓰는 게 가장 귀찮은 일이었다. 커밋은 매일 하는데, 블로그 글은 한 달에 한 편도 힘들다.</p>
+
+      <p><strong>그래서 만들었다.</strong> GitHub에 push하면 커밋 로그를 분석해서 블로그 글을 자동으로 생성하는 파이프라인.</p>
+
+      <h2 id="s1">왜 이걸 만들었나</h2>
+
+      <p>개발자 블로그의 가장 큰 적은 귀찮음이다. 코드는 매일 쓰지만, 그걸 정리해서 글로 만드는 건 완전히 다른 에너지가 필요하다.</p>
+
+      <p>커밋 메시지에 이미 "뭘 했는지"가 다 들어있다. diff를 보면 "어떻게 했는지"도 알 수 있다. 이 데이터를 AI에게 넘기면 블로그 글의 80%는 자동으로 만들 수 있지 않을까?</p>
+
+      <p>3일 삽질한 결과, <strong>된다.</strong> 근데 생각보다 까다로운 부분이 있었다.</p>
+
+      <h2 id="s2">전체 아키텍처</h2>
+
+      <p>구조는 단순하다. GitHub Webhook으로 push 이벤트를 받고, Octokit으로 커밋 데이터를 수집하고, Claude API로 글을 생성한 다음 DB에 저장한다.</p>
+
+      <pre><code><span class="lang">typescript</span>
+app.post('/api/webhooks/github', async (req, res) => {
+  const { commits, repository } = req.body;
+  
+  const enriched = await Promise.all(
+    commits.map(c => octokit.repos.getCommit({
+      owner: repository.owner.login,
+      repo: repository.name,
+      ref: c.id,
+    }))
+  );
+
+  const draft = await generatePost(enriched, repository);
+  await db.posts.create({ data: draft });
+});</code></pre>
+
+      <p>이렇게 보면 쉬워 보이는데, 실제로는 커밋 데이터를 <strong>"글감"으로 가공하는 과정"</strong>이 핵심이었다.</p>
+
+      <h2 id="s3">삽질: diff 데이터 전처리</h2>
+
+      <p>처음에는 커밋 diff 전체를 Claude API에 던졌다. 파일 하나 수정한 커밋은 괜찮은데, 리팩토링 커밋은 diff가 수백 줄이다.</p>
+
+      <pre><code><span class="lang">typescript</span>
+// Before — diff 전체를 넘김 (토큰 폭발)
+const prompt = `diff:\n${commit.diff}`;
+// → 한 번에 $0.12
+
+// After — 파일별 요약만 추출
+const summary = commit.files.map(f => ({
+  filename: f.filename,
+  status: f.status,
+  patch: f.patch?.slice(0, 500),
+}));
+// → 한 번에 $0.008</code></pre>
+
+      <p><strong>$0.12 vs $0.008.</strong> 같은 결과. 15배 차이.</p>
+
+      <h2 id="s4">AI 프롬프트 설계</h2>
+
+      <p>글이 AI스러워 보이면 안 된다. 기존에 만들어둔 <code class="il">SKILL.md</code>를 시스템 프롬프트로 넣고, 문체 규칙을 강제했다.</p>
+
+      <blockquote>
+        <p><strong>"모든 커밋에 교수를 부르지 마라."</strong> — 사소한 수정은 짧게, 의미 있는 변경만 깊게 써야 읽을 만한 글이 된다.</p>
+      </blockquote>
+
+      <div class="detail-tags">
+        <span class="detail-tag">AI</span>
+        <span class="detail-tag">Claude</span>
+        <span class="detail-tag">자동화</span>
+        <span class="detail-tag">GitHub</span>
+        <span class="detail-tag">Webhook</span>
+      </div>
+
+    </article>
+
+    <aside class="detail-toc">
+      <div class="toc-label">On this page</div>
+      <a class="toc-item on">왜 이걸 만들었나</a>
+      <a class="toc-item">전체 아키텍처</a>
+      <a class="toc-item">삽질: diff 데이터 전처리</a>
+      <a class="toc-item">AI 프롬프트 설계</a>
+    </aside>
+  </div>
+
+  <div class="detail-nav">
+    <div class="detail-nav-item">
+      <div class="detail-nav-label">← 이전 글</div>
+      <div class="detail-nav-title">Claude Code 실전 워크플로우</div>
+    </div>
+    <div class="detail-nav-item right">
+      <div class="detail-nav-label">다음 글 →</div>
+      <div class="detail-nav-title">Socket.IO 팀 배정 리팩토링</div>
+    </div>
+  </div>
+
+  <div class="detail-comments">
+    <div class="comments-box">
+      💬 Giscus 댓글 영역<br>
+      <span style="font-size:0.75rem;opacity:0.6;">GitHub Discussions 기반</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== ABOUT PAGE ========== -->
+<div class="page" id="pg-about">
+
+  <div class="about-hero-section">
+    <div class="about-avatar-circle">E</div>
+    <h1 class="about-hero-name">이더</h1>
+    <p class="about-hero-role">UE5 C++ 게임 프로그래머</p>
+    <p class="about-hero-sub">AI × 사이드프로젝트 빌더</p>
+    <div class="about-links">
+      <button class="about-link-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        GitHub
+      </button>
+      <button class="about-link-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Email
+      </button>
+      <button class="about-link-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+        RSS
+      </button>
+    </div>
+  </div>
+
+  <div class="about-body">
+    <h2 class="about-heading">소개</h2>
+    <div class="about-paragraph">
+      <p>본업은 UE5 C++ 게임 프로그래머다. 멀티플레이어 시스템, Slate UI, iOS/Android 크로스플랫폼 개발을 하고 있다.</p>
+      <p style="margin-top:1rem;">퇴근 후에는 AI로 실제 작동하는 프로덕트를 만든다. "AI를 공부한다"가 아니라 "AI로 뭔가를 만들어서 돌린다"에 가깝다. 이 블로그는 그 과정에서 생기는 삽질, 코드, 깨달음을 기록하는 곳이다.</p>
+      <p style="margin-top:1rem;">GitHub에 커밋하면 AI가 자동으로 글을 써주는 시스템을 만들어서, 코드를 쓰는 것만으로도 블로그가 업데이트된다.</p>
+    </div>
+
+    <h2 class="about-heading">프로젝트</h2>
+    <div class="about-projects">
+      <div class="about-proj-card">
+        <div class="proj-icon" style="background:linear-gradient(135deg,#00C471,#059669);">🎲</div>
+        <div class="proj-name">LAMDiceBot</div>
+        <div class="proj-desc">멀티플레이어 게이밍 플랫폼. 주사위, 룰렛, 경마 게임과 실시간 팀 배정 시스템.</div>
+        <div class="proj-tags">
+          <span class="proj-tag">Node.js</span>
+          <span class="proj-tag">Socket.IO</span>
+          <span class="proj-tag">Railway</span>
+        </div>
+      </div>
+      <div class="about-proj-card">
+        <div class="proj-icon" style="background:linear-gradient(135deg,#3182F6,#1D4ED8);">📝</div>
+        <div class="proj-name">git2blog</div>
+        <div class="proj-desc">GitHub 커밋 → 블로그 글 자동 생성 파이프라인.</div>
+        <div class="proj-tags">
+          <span class="proj-tag">Claude API</span>
+          <span class="proj-tag">GitHub</span>
+          <span class="proj-tag">Hashnode</span>
+        </div>
+      </div>
+      <div class="about-proj-card">
+        <div class="proj-icon" style="background:linear-gradient(135deg,#FF6B35,#D97706);">💍</div>
+        <div class="proj-name">wedding-invitation</div>
+        <div class="proj-desc">모바일 청첩장 웹앱. 테마 커스터마이징 + 드래그앤드롭 사진 업로드.</div>
+        <div class="proj-tags">
+          <span class="proj-tag">React</span>
+          <span class="proj-tag">Tailwind</span>
+          <span class="proj-tag">DnD Kit</span>
+        </div>
+      </div>
+      <div class="about-proj-card">
+        <div class="proj-icon" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);">🎮</div>
+        <div class="proj-name">GameForge</div>
+        <div class="proj-desc">AI 기반 게임 생성 플랫폼. 프롬프트로 게임을 만드는 실험 프로젝트.</div>
+        <div class="proj-tags">
+          <span class="proj-tag">AI</span>
+          <span class="proj-tag">UE5</span>
+          <span class="proj-tag">실험중</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="about-heading">기술 스택</h2>
+    <div class="about-stack">
+      <span class="stack-item">Unreal Engine 5</span>
+      <span class="stack-item">C++</span>
+      <span class="stack-item">Node.js</span>
+      <span class="stack-item">React</span>
+      <span class="stack-item">Next.js</span>
+      <span class="stack-item">TypeScript</span>
+      <span class="stack-item">Socket.IO</span>
+      <span class="stack-item">Python</span>
+      <span class="stack-item">Claude API</span>
+      <span class="stack-item">PostgreSQL</span>
+      <span class="stack-item">Railway</span>
+      <span class="stack-item">Tailwind CSS</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">이더<span>.</span>dev</div>
+      <div class="footer-copy">© 2026 이더. Powered by Next.js + Railway</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <div class="footer-col-title">Links</div>
+        <a href="#">GitHub</a>
+        <a href="#">RSS Feed</a>
+        <a href="#">Email</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Categories</div>
+        <a href="#">Commits</a>
+        <a href="#">Articles</a>
+        <a href="#">Tech Lab</a>
+        <a href="#">Casual</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ========== SCRIPTS ========== -->
+<script>
+function go(p) {
+  document.getElementById('pg-main').style.display = p === 'main' ? 'block' : 'none';
+  document.getElementById('pg-detail').classList.toggle('show', p === 'detail');
+  document.getElementById('pg-about').classList.toggle('show', p === 'about');
+  document.querySelectorAll('.mockup-bar button').forEach((b,i) => {
+    b.classList.toggle('active', (p==='main'&&i===0)||(p==='detail'&&i===1)||(p==='about'&&i===2));
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleTheme() {
+  const h = document.documentElement;
+  const d = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  h.setAttribute('data-theme', d);
+  document.querySelector('.sun').style.display = d==='dark' ? 'none' : 'block';
+  document.querySelector('.moon').style.display = d==='dark' ? 'block' : 'none';
+}
+
+function filterChip(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+document.querySelectorAll('.toc-item').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.toc-item').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+  });
+});
+
+if (window.matchMedia('(prefers-color-scheme:dark)').matches) toggleTheme();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+외부 발행 API를 만들어줘. git2blog 등에서 API Key로 글을 올릴 수 있게.
+
+1. lib/api-auth.ts:
+   - Bearer token에서 API Key 추출
+   - DB에서 해시된 키 조회 + active 체크
+   - lastUsedAt 업데이트
+   - 인증 실패 시 401 응답
+
+2. app/api/v1/posts/route.ts:
+   - POST: 새 글 발행
+     - body: { title, content, category, tags, coverImage?, slug?, published?, locale?, projectSlug? }
+     - slug 자동 생성 (없으면 title에서 kebab-case)
+     - readingTime 자동 계산 (한글 기준 분당 400자)
+   - GET: 글 목록 조회 (필터: category, tag, projectSlug, published)
+     - 페이지네이션: ?page=1&limit=20
+
+3. app/api/v1/posts/[id]/route.ts:
+   - PUT: 글 수정
+   - DELETE: 글 삭제
+
+모든 엔드포인트에 api-auth 미들웨어 적용.
+응답 형식: { success: boolean, data?: T, error?: string }

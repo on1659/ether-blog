@@ -1,0 +1,16 @@
+전체 프로젝트를 점검해줘.
+
+1. TypeScript 에러 확인: npx tsc --noEmit
+2. 린트: npx next lint
+3. 빌드 테스트: npx next build
+4. 모든 페이지 접근 테스트:
+   - /, /commits, /articles, /techlab, /casual
+   - /post/[slug], /about, /search, /series
+   - /admin, /admin/posts, /admin/analytics, /admin/settings
+   - /api/v1/posts (GET, POST)
+   - /api/webhooks/github
+5. 다크모드 전체 페이지 확인
+6. 모바일 반응형 확인 (640px, 768px, 1024px)
+7. SEO 체크: sitemap.xml, robots.txt, OG 태그
+8. 누락된 기능이 있으면 수정
+9. README.md 작성 (설치, 환경변수, 배포 방법)

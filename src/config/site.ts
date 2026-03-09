@@ -1,0 +1,65 @@
+export const siteConfig = {
+  title: "이더.dev",
+  description: "코드를 쓰면, 글이 된다. GitHub 커밋 기반 AI 자동 기술 블로그.",
+  url: "https://ether.dev",
+  author: {
+    name: "이더",
+    nameEn: "Ether",
+    role: "UE5 C++ 게임 프로그래머",
+    sub: "AI × 사이드프로젝트 빌더",
+    github: "https://github.com/your-username",
+    email: "your@email.com",
+    bio: [
+      "본업은 UE5 C++ 게임 프로그래머다. 멀티플레이어 시스템, Slate UI, iOS/Android 크로스플랫폼 개발을 하고 있다.",
+      "퇴근 후에는 AI로 실제 작동하는 프로덕트를 만든다. \"AI를 공부한다\"가 아니라 \"AI로 뭔가를 만들어서 돌린다\"에 가깝다. 이 블로그는 그 과정에서 생기는 삽질, 코드, 깨달음을 기록하는 곳이다.",
+      "GitHub에 커밋하면 AI가 자동으로 글을 써주는 시스템을 만들어서, 코드를 쓰는 것만으로도 블로그가 업데이트된다.",
+    ],
+  },
+  nav: [
+    { label: "Blog", href: "/" },
+    { label: "Projects", href: "/about#projects" },
+    { label: "About", href: "/about" },
+  ],
+  categories: [
+    { key: "all", label: "전체", color: "" },
+    { key: "commits", label: "Commits", color: "#00C471" },
+    { key: "articles", label: "Articles", color: "#3182F6" },
+    { key: "techlab", label: "Tech Lab", color: "#8B5CF6" },
+    { key: "casual", label: "Casual", color: "#FF6B35" },
+  ],
+  projects: [
+    {
+      name: "LAMDiceBot",
+      description: "멀티플레이어 게이밍 플랫폼. 주사위, 룰렛, 경마 게임과 실시간 팀 배정 시스템.",
+      icon: "🎲",
+      gradient: "from-[#00C471] to-[#059669]",
+      tags: ["Node.js", "Socket.IO", "Railway"],
+    },
+    {
+      name: "git2blog",
+      description: "GitHub 커밋 → 블로그 글 자동 생성 파이프라인.",
+      icon: "📝",
+      gradient: "from-[#3182F6] to-[#1D4ED8]",
+      tags: ["Claude API", "GitHub", "Hashnode"],
+    },
+    {
+      name: "wedding-invitation",
+      description: "모바일 청첩장 웹앱. 테마 커스터마이징 + 드래그앤드롭 사진 업로드.",
+      icon: "💍",
+      gradient: "from-[#FF6B35] to-[#D97706]",
+      tags: ["React", "Tailwind", "DnD Kit"],
+    },
+    {
+      name: "GameForge",
+      description: "AI 기반 게임 생성 플랫폼. 프롬프트로 게임을 만드는 실험 프로젝트.",
+      icon: "🎮",
+      gradient: "from-[#8B5CF6] to-[#6D28D9]",
+      tags: ["AI", "UE5", "실험중"],
+    },
+  ],
+  techStack: [
+    "Unreal Engine 5", "C++", "Node.js", "React", "Next.js",
+    "TypeScript", "Socket.IO", "Python", "Claude API",
+    "PostgreSQL", "Railway", "Tailwind CSS",
+  ],
+} as const;

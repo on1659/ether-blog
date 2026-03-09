@@ -1,0 +1,15 @@
+관리자 설정 페이지의 레포 관리를 강화해줘.
+
+app/admin/settings/page.tsx 의 레포 관리 섹션:
+1. 레포 추가 폼: owner, name, branch(기본 main), 자동발행 토글
+2. 레포 목록:
+   - 각 레포: owner/repo, branch, 자동발행 상태, 마지막 감지 시간
+   - 수정/삭제 버튼
+   - "Webhook URL" 복사 버튼 (GitHub에서 설정할 URL)
+   - "테스트" 버튼 — 최근 커밋 1개를 가져와서 글 생성 미리보기
+3. AI 프롬프트 커스텀:
+   - 레포별 추가 프롬프트 (promptTemplate 필드)
+   - 기본 AI 글 생성 규칙 (BLOG_REQUIREMENTS.md 부록) + 레포별 추가 지시
+4. Webhook 설정 가이드:
+   - GitHub 레포 Settings → Webhooks 설정 방법 안내 텍스트
+   - Payload URL, Content type, Secret, Events 설정값 표시

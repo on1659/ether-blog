@@ -1,0 +1,30 @@
+커밋 데이터를 받아서 블로그 글을 생성하는 파이프라인을 만들어줘.
+
+lib/claude.ts:
+- Anthropic SDK 클라이언트 초기화
+- generateBlogPost(commitData, options) 함수
+
+lib/generate-post.ts:
+1. 입력: 커밋 데이터 배열 + 레포 정보
+2. 커밋 데이터 전처리:
+   - 파일별 patch 요약 (앞 500자)
+   - 변경 통계 (additions, deletions, files changed)
+   - 커밋 메시지 정리
+3. Claude API 호출:
+   - system prompt: BLOG_REQUIREMENTS.md 부록의 "AI 자동 글 생성 규칙"을 그대로 포함
+     - 대화체(~다 체), 첫 문장 핵심, 불릿/넘버링 금지
+     - Before/After 코드 대비, 구체적 숫자
+     - 5000~8000자, 섹션 4개 이상
+   - user prompt: 커밋 데이터 + "이 커밋들을 기반으로 기술 블로그 글을 작성해줘"
+   - 응답에서 title, content, tags 파싱
+4. 결과를 Post 모델로 DB에 저장:
+   - category: COMMITS
+   - projectSlug: 레포 이름
+   - commitHash: 마지막 커밋 해시
+   - commitRepo: owner/repo
+   - commitFilesChanged: 총 변경 파일 수
+   - published: WatchedRepo.autoPublish에 따라
+   - readingTime 자동 계산
+5. 에러 처리: 실패 시 로그 남기고 무시 (Webhook 응답에 영향 없게)
+
+한영 동시 작성은 Phase 3에서 추가. 지금은 한국어만.

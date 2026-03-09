@@ -1,0 +1,11 @@
+Prisma 스키마를 만들어줘.
+
+필요한 모델:
+- Post: id, title, subtitle, slug(unique), content(markdown), category(enum: COMMITS/ARTICLES/TECHLAB/CASUAL), tags(String[]), coverImage, published(bool), locale(ko/en), readingTime, projectSlug, commitHash, commitRepo, commitFilesChanged, seriesId, createdAt, updatedAt
+- Series: id, title, slug(unique), description, posts(relation)
+- ApiKey: id, name, key(unique+hashed), lastUsedAt, createdAt, active(bool)
+- WatchedRepo: id, owner, name, branch, autoPublish(bool), promptTemplate, categoryMapping, createdAt
+- Analytics: id, postId, views, referrer, userAgent, createdAt (간단한 내부 트래킹용)
+
+prisma/schema.prisma 생성하고, lib/prisma.ts에 singleton 클라이언트 만들어줘.
+DB는 PostgreSQL (Railway), DATABASE_URL은 .env에서 읽어.
