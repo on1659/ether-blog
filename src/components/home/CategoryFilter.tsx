@@ -1,18 +1,35 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { siteConfig } from "@/config/site";
 
-export const CategoryFilter = () => {
+interface CategoryDict {
+  all: string;
+  commits: string;
+  articles: string;
+  techlab: string;
+  casual: string;
+}
+
+export const CategoryFilter = ({ dict }: { dict: CategoryDict }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const current = searchParams.get("category") || "all";
+
+  const labels: Record<string, string> = {
+    all: dict.all,
+    commits: dict.commits,
+    articles: dict.articles,
+    techlab: dict.techlab,
+    casual: dict.casual,
+  };
 
   const handleFilter = (key: string) => {
     if (key === "all") {
-      router.push("/", { scroll: false });
+      router.push(pathname, { scroll: false });
     } else {
-      router.push(`/?category=${key}`, { scroll: false });
+      router.push(`${pathname}?category=${key}`, { scroll: false });
     }
   };
 
@@ -28,7 +45,7 @@ export const CategoryFilter = () => {
               : "border-border bg-bg-primary text-text-tertiary hover:border-text-tertiary hover:text-text-secondary"
           }`}
         >
-          {cat.label}
+          {labels[cat.key] || cat.label}
         </button>
       ))}
     </div>

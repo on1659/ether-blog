@@ -1,0 +1,66 @@
+{
+  "nav": {
+    "blog": "Blog",
+    "projects": "Projects",
+    "about": "About",
+    "search": "Search",
+    "language": "KO"
+  },
+  "hero": {
+    "title": "Code becomes content.",
+    "subtitle": "AI automatically generates blog posts from your GitHub commits.",
+    "description": "Game programmer's AI × side project development log."
+  },
+  "home": {
+    "recentPosts": "Recent Posts",
+    "viewAll": "View All",
+    "noPosts": "No posts yet."
+  },
+  "category": {
+    "all": "All",
+    "commits": "Commits",
+    "articles": "Articles",
+    "techlab": "Tech Lab",
+    "casual": "Casual"
+  },
+  "categoryDesc": {
+    "commits": "Auto-generated development logs from GitHub commits",
+    "articles": "Organized technical articles and tutorials",
+    "techlab": "Experimental tech research and benchmarks",
+    "casual": "Dev talks, retrospectives, and daily life"
+  },
+  "post": {
+    "minRead": "min read",
+    "prevPost": "← Previous",
+    "nextPost": "Next →",
+    "toc": "On this page",
+    "author": "Ether"
+  },
+  "search": {
+    "placeholder": "Search posts...",
+    "recentSearches": "Recent Searches",
+    "clearAll": "Clear All",
+    "popularTags": "Popular Tags",
+    "loading": "Loading...",
+    "noResults": "No results found for",
+    "resultsCount": "results found"
+  },
+  "series": {
+    "title": "Series",
+    "empty": "No series yet.",
+    "postCount": "posts"
+  },
+  "about": {
+    "title": "About",
+    "projects": "Projects"
+  },
+  "footer": {
+    "links": "Links",
+    "categories": "Categories",
+    "copyright": "© 2026 Ether. Powered by Next.js + Railway"
+  },
+  "common": {
+    "readMore": "Read More",
+    "goBack": "Go Back"
+  }
+}

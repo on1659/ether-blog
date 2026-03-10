@@ -1,7 +1,18 @@
-export const HeroBanner = () => {
+interface HeroDict {
+  title: string;
+  subtitle: string;
+  description: string;
+}
+
+export const HeroBanner = ({ dict }: { dict: HeroDict }) => {
+  // Split title for gradient styling - detect Korean or English
+  const isKo = dict.title.includes("글이 된다");
+  const titleParts = isKo
+    ? { before: "코드를 쓰면, ", highlight: "글이 된다." }
+    : { before: "Code becomes ", highlight: "content." };
+
   return (
     <section className="relative overflow-hidden bg-[#1B1D1F] px-8 py-20 text-center dark:bg-[#0F1012]">
-      {/* Gradient glow effect */}
       <div
         className="pointer-events-none absolute -left-[20%] -top-[50%] h-[200%] w-[140%]"
         style={{
@@ -11,15 +22,15 @@ export const HeroBanner = () => {
       />
       <div className="relative z-10 mx-auto max-w-[640px]">
         <h1 className="mb-4 text-[2rem] font-[800] leading-[1.35] tracking-[-0.03em] text-white">
-          코드를 쓰면,{" "}
+          {titleParts.before}
           <em className="bg-gradient-to-br from-[#3182F6] to-[#8B5CF6] bg-clip-text not-italic text-transparent">
-            글이 된다.
+            {titleParts.highlight}
           </em>
         </h1>
         <p className="text-[1.0625rem] leading-[1.7] text-white/70">
-          GitHub에 커밋하면 AI가 블로그 글을 자동으로 생성합니다.
+          {dict.subtitle}
           <br />
-          게임 프로그래머의 AI × 사이드프로젝트 개발 기록.
+          {dict.description}
         </p>
       </div>
     </section>

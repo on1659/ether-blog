@@ -1,24 +1,26 @@
 import Link from "next/link";
 
-export const Footer = () => {
+interface FooterDict {
+  links: string;
+  categories: string;
+  copyright: string;
+}
+
+export const Footer = ({ dict }: { dict: FooterDict }) => {
   return (
     <footer className="border-t border-border py-10 px-8">
       <div className="mx-auto flex max-w-container flex-col justify-between gap-8 sm:flex-row sm:items-start">
-        {/* Brand */}
         <div>
           <div className="mb-2 text-base font-[800]">
             이더<span className="text-brand-primary">.</span>dev
           </div>
-          <div className="text-meta text-text-muted">
-            © 2026 이더. Powered by Next.js + Railway
-          </div>
+          <div className="text-meta text-text-muted">{dict.copyright}</div>
         </div>
 
-        {/* Link Columns */}
         <div className="flex gap-6">
           <div>
             <div className="mb-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-text-muted">
-              Links
+              {dict.links}
             </div>
             <Link href="https://github.com" className="mb-1.5 block text-meta text-text-tertiary transition-colors duration-base hover:text-brand-primary">
               GitHub
@@ -32,7 +34,7 @@ export const Footer = () => {
           </div>
           <div>
             <div className="mb-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-text-muted">
-              Categories
+              {dict.categories}
             </div>
             <Link href="/commits" className="mb-1.5 block text-meta text-text-tertiary transition-colors duration-base hover:text-brand-primary">
               Commits

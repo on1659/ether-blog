@@ -6,7 +6,10 @@ import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryFilter } from "@/components/home/CategoryFilter";
 import { PostList } from "@/components/post/PostList";
 import { prisma } from "@/lib/prisma";
+import { getDictionary } from "@/i18n";
+import { isValidLocale, i18n } from "@/i18n/config";
 import type { Category } from "@/types";
+import type { Locale } from "@/i18n/config";
 
 const getPosts = async (category?: string) => {
   try {
@@ -56,32 +59,38 @@ const getPosts = async (category?: string) => {
 };
 
 const Home = async ({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ category?: string }>;
 }) => {
-  const params = await searchParams;
-  const posts = await getPosts(params.category);
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isValidLocale(rawLocale) ? rawLocale : i18n.defaultLocale;
+  const dict = await getDictionary(locale);
+  const sp = await searchParams;
+  const posts = await getPosts(sp.category);
+
+  const prefix = locale === "ko" ? "" : `/${locale}`;
 
   return (
     <>
-      <HeroBanner />
+      <HeroBanner dict={dict.hero} />
 
-      {/* Section Header */}
       <div className="mx-auto flex max-w-container items-center justify-between px-8 pt-12">
         <h2 className="text-[1.375rem] font-bold tracking-[-0.02em]">
-          최근 게시물
+          {dict.home.recentPosts}
         </h2>
         <Link
-          href="/articles"
+          href={`${prefix}/articles`}
           className="text-sm font-medium text-text-tertiary transition-colors duration-base hover:text-brand-primary"
         >
-          전체보기 →
+          {dict.home.viewAll} →
         </Link>
       </div>
 
       <Suspense>
-        <CategoryFilter />
+        <CategoryFilter dict={dict.category} />
       </Suspense>
 
       <PostList posts={posts} />

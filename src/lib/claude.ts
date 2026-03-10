@@ -1,9 +1,10 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.Z_AI_API_KEY,
-  baseURL: "https://chat.z.ai/api",
-});
+const getClient = () =>
+  new OpenAI({
+    apiKey: process.env.Z_AI_API_KEY || "dummy",
+    baseURL: "https://chat.z.ai/api",
+  });
 
 const SYSTEM_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그 글 작성자입니다.
 커밋 정보를 바탕으로 기술 블로그 글을 작성합니다.
@@ -92,7 +93,7 @@ export const generateBlogContent = async ({
     systemPrompt += "\n\n## Language\n\nWrite in English. Natural, conversational tone.";
   }
 
-  const response = await client.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: "glm-4",
     max_tokens: 8000,
     messages: [
