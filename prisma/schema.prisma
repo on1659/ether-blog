@@ -37,7 +37,8 @@ model Post {
   seriesOrder Int?
 
   // 조회수
-  analytics   Analytics[]
+  viewCount   Int      @default(0)
+  analytics   DailyAnalytics[]
 
   @@index([category])
   @@index([published])
@@ -78,17 +79,16 @@ model WatchedRepo {
   @@unique([owner, name])
 }
 
-model Analytics {
-  id        String   @id @default(cuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  views     Int      @default(1)
-  referrer  String?
-  userAgent String?
-  createdAt DateTime @default(now())
+model DailyAnalytics {
+  id     String   @id @default(cuid())
+  postId String
+  post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date
+  views  Int      @default(0)
 
+  @@unique([postId, date])
+  @@index([date])
   @@index([postId])
-  @@index([createdAt])
 }
 
 enum Category {

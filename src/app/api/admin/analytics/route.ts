@@ -17,16 +17,16 @@ export const GET = async (req: NextRequest) => {
 
   try {
     // 기간 내 총 조회수
-    const totalResult = await prisma.analytics.aggregate({
-      where: { createdAt: { gte: since } },
+    const totalResult = await prisma.dailyAnalytics.aggregate({
+      where: { date: { gte: since } },
       _sum: { views: true },
     });
     const totalViews = totalResult._sum.views || 0;
 
     // 글별 조회수 Top 10
-    const topPostsRaw = await prisma.analytics.groupBy({
+    const topPostsRaw = await prisma.dailyAnalytics.groupBy({
       by: ["postId"],
-      where: { createdAt: { gte: since } },
+      where: { date: { gte: since } },
       _sum: { views: true },
       orderBy: { _sum: { views: "desc" } },
       take: 10,
@@ -49,26 +49,25 @@ export const GET = async (req: NextRequest) => {
       };
     });
 
-    // 일별 조회수
-    const dailyRaw = await prisma.$queryRaw<{ date: string; views: bigint }[]>`
-      SELECT DATE("createdAt") as date, SUM(views)::bigint as views
-      FROM "Analytics"
-      WHERE "createdAt" >= ${since}
-      GROUP BY DATE("createdAt")
-      ORDER BY date ASC
-    `;
+    // 일별 조회수 — raw SQL 제거, 인덱스 활용
+    const dailyRaw = await prisma.dailyAnalytics.groupBy({
+      by: ["date"],
+      where: { date: { gte: since } },
+      _sum: { views: true },
+      orderBy: { date: "asc" },
+    });
 
     const daily = dailyRaw.map((d) => ({
-      date: new Date(d.date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }),
-      views: Number(d.views),
+      date: d.date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" }),
+      views: d._sum.views || 0,
     }));
 
     // 카테고리별 조회수
     const categoryRaw = await prisma.$queryRaw<{ category: string; views: bigint }[]>`
       SELECT p.category, SUM(a.views)::bigint as views
-      FROM "Analytics" a
+      FROM "DailyAnalytics" a
       JOIN "Post" p ON a."postId" = p.id
-      WHERE a."createdAt" >= ${since}
+      WHERE a.date >= ${since}
       GROUP BY p.category
       ORDER BY views DESC
     `;

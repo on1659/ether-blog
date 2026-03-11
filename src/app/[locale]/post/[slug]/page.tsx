@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,10 @@ import { ViewTracker } from "./ViewTracker";
 import type { Category } from "@/types";
 import Link from "next/link";
 
+const getPost = cache(async (slug: string) => {
+  return prisma.post.findUnique({ where: { slug } }).catch(() => null);
+});
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -20,10 +25,7 @@ export const generateMetadata = async ({
   params,
 }: PageProps): Promise<Metadata> => {
   const { slug } = await params;
-  const post = await prisma.post.findUnique({
-    where: { slug },
-    select: { title: true, excerpt: true, category: true },
-  }).catch(() => null);
+  const post = await getPost(slug);
 
   if (!post) return { title: "Not Found" };
 
@@ -40,9 +42,7 @@ export const generateMetadata = async ({
 
 const PostPage = async ({ params }: PageProps) => {
   const { slug } = await params;
-  const post = await prisma.post.findUnique({
-    where: { slug },
-  }).catch(() => null);
+  const post = await getPost(slug);
 
   if (!post || !post.published) notFound();
 
