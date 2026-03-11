@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { calculateReadingTime } from "@/lib/markdown";
@@ -119,6 +120,13 @@ export const POST = async (req: NextRequest) => {
         filesChanged,
       },
     });
+
+    // published로 생성 시 ISR 캐시 즉시 갱신
+    if (published) {
+      revalidatePath("/");
+      revalidatePath(`/${category}`);
+      revalidatePath(`/post/${finalSlug}`);
+    }
 
     const res: ApiResponse = { success: true, data: post };
     return NextResponse.json(res, { status: 201 });

@@ -93,6 +93,7 @@ export const processCommits = async (
         repoName: repo,
         filesChanged: filesSummary,
         customPrompt: watchedRepo.promptTemplate || undefined,
+        brief: true,
       });
 
       const slug = title
