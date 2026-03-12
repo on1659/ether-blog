@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Plus, Trash2, GitBranch, Copy, Check, Info, RefreshCw, Webhook,
   Shield, Server, Bot, Save, ChevronDown, ChevronUp, Key, Eye, EyeOff,
+  Layers, GripVertical, ExternalLink,
 } from "lucide-react";
 
 /* ───── Types ───── */
@@ -39,6 +40,29 @@ interface AiProvider {
   label: string;
   connected: boolean;
 }
+
+interface ProjectItem {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  gradient: string;
+  tags: string[];
+  githubUrl: string | null;
+  deployUrl: string | null;
+  order: number;
+  active: boolean;
+}
+
+const GRADIENT_PRESETS = [
+  { label: "Blue", value: "from-[#3182F6] to-[#1D4ED8]" },
+  { label: "Green", value: "from-[#00C471] to-[#059669]" },
+  { label: "Purple", value: "from-[#8B5CF6] to-[#6D28D9]" },
+  { label: "Orange", value: "from-[#FF6B35] to-[#D97706]" },
+  { label: "Red", value: "from-[#EF4444] to-[#B91C1C]" },
+  { label: "Cyan", value: "from-[#06B6D4] to-[#0891B2]" },
+  { label: "Pink", value: "from-[#EC4899] to-[#BE185D]" },
+];
 
 /* ───── AI Provider → Model mapping ───── */
 
@@ -140,6 +164,18 @@ const AdminSettingsPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState("");
 
+  // projects
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [projName, setProjName] = useState("");
+  const [projDesc, setProjDesc] = useState("");
+  const [projIcon, setProjIcon] = useState("📦");
+  const [projGradient, setProjGradient] = useState(GRADIENT_PRESETS[0].value);
+  const [projTags, setProjTags] = useState("");
+  const [projGithub, setProjGithub] = useState("");
+  const [projDeploy, setProjDeploy] = useState("");
+  const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [editProjData, setEditProjData] = useState<Partial<ProjectItem>>({});
+
   const webhookUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/api/webhooks/github`
@@ -190,11 +226,22 @@ const AdminSettingsPage = () => {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch("/api/admin/projects");
+      const data = await res.json();
+      if (data.success) setProjects(data.data);
+    } catch {
+      /* silent */
+    }
+  };
+
   useEffect(() => {
     fetchEnvStatus();
     fetchSettings();
     fetchApiKeys();
     fetchRepos();
+    fetchProjects();
   }, []);
 
   /* ───── Settings actions ───── */
@@ -367,6 +414,56 @@ const AdminSettingsPage = () => {
     navigator.clipboard.writeText(webhookUrl);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
+  /* ───── Project actions ───── */
+
+  const addProject = async () => {
+    if (!projName.trim()) return;
+    try {
+      const res = await fetch("/api/admin/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: projName,
+          description: projDesc || null,
+          icon: projIcon,
+          gradient: projGradient,
+          tags: projTags.split(",").map((t) => t.trim()).filter(Boolean),
+          githubUrl: projGithub || null,
+          deployUrl: projDeploy || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProjName("");
+        setProjDesc("");
+        setProjIcon("📦");
+        setProjGradient(GRADIENT_PRESETS[0].value);
+        setProjTags("");
+        setProjGithub("");
+        setProjDeploy("");
+        fetchProjects();
+      }
+    } catch {
+      alert("프로젝트 추가에 실패했습니다.");
+    }
+  };
+
+  const deleteProject = async (id: string) => {
+    if (!confirm("이 프로젝트를 삭제하시겠습니까?")) return;
+    await fetch(`/api/admin/projects/${id}`, { method: "DELETE" });
+    fetchProjects();
+  };
+
+  const saveProjectEdit = async (id: string) => {
+    await fetch(`/api/admin/projects/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editProjData),
+    });
+    setEditingProject(null);
+    fetchProjects();
   };
 
   /* ───── Env grouping ───── */
@@ -740,7 +837,182 @@ const AdminSettingsPage = () => {
         </div>
       </Section>
 
-      {/* ── 5. GitHub 감시 레포 ── */}
+      {/* ── 5. 프로젝트 관리 ── */}
+      <Section title="프로젝트 관리" icon={Layers}>
+        <p className="mb-4 text-meta text-text-tertiary">
+          About 페이지에 표시되는 프로젝트 목록입니다. GitHub/배포 URL을 입력하면 자동으로 등록됩니다.
+        </p>
+
+        {/* Add Project Form */}
+        <div className="mb-4 space-y-2 rounded-lg border border-border bg-bg-secondary p-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              value={projName}
+              onChange={(e) => setProjName(e.target.value)}
+              placeholder="프로젝트 이름 *"
+              className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            />
+            <input
+              value={projDesc}
+              onChange={(e) => setProjDesc(e.target.value)}
+              placeholder="설명"
+              className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              value={projGithub}
+              onChange={(e) => setProjGithub(e.target.value)}
+              placeholder="GitHub URL (https://github.com/...)"
+              className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            />
+            <input
+              value={projDeploy}
+              onChange={(e) => setProjDeploy(e.target.value)}
+              placeholder="배포 URL (Railway, Vercel 등)"
+              className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={projIcon}
+              onChange={(e) => setProjIcon(e.target.value)}
+              placeholder="아이콘"
+              className="w-16 rounded-lg border border-border bg-bg-primary px-3 py-2 text-center text-card-desc outline-none focus:border-brand-primary"
+            />
+            <select
+              value={projGradient}
+              onChange={(e) => setProjGradient(e.target.value)}
+              className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            >
+              {GRADIENT_PRESETS.map((g) => (
+                <option key={g.value} value={g.value}>{g.label}</option>
+              ))}
+            </select>
+            <input
+              value={projTags}
+              onChange={(e) => setProjTags(e.target.value)}
+              placeholder="태그 (쉼표 구분: React, Node.js)"
+              className="flex-1 rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+            />
+            <button
+              onClick={addProject}
+              className="flex items-center gap-1 rounded-lg bg-brand-primary px-4 py-2 text-meta font-medium text-white transition-opacity hover:opacity-90"
+            >
+              <Plus size={14} /> 추가
+            </button>
+          </div>
+        </div>
+
+        {/* Project List */}
+        <div className="divide-y divide-border-light rounded-lg border border-border">
+          {projects.map((proj) => (
+            <div key={proj.id} className={`px-4 py-3 ${!proj.active ? "opacity-50" : ""}`}>
+              {editingProject === proj.id ? (
+                /* Edit Mode */
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <input
+                      value={editProjData.name ?? proj.name}
+                      onChange={(e) => setEditProjData({ ...editProjData, name: e.target.value })}
+                      className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+                    />
+                    <input
+                      value={editProjData.description ?? proj.description ?? ""}
+                      onChange={(e) => setEditProjData({ ...editProjData, description: e.target.value || null })}
+                      placeholder="설명"
+                      className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <input
+                      value={editProjData.githubUrl ?? proj.githubUrl ?? ""}
+                      onChange={(e) => setEditProjData({ ...editProjData, githubUrl: e.target.value || null })}
+                      placeholder="GitHub URL"
+                      className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+                    />
+                    <input
+                      value={editProjData.deployUrl ?? proj.deployUrl ?? ""}
+                      onChange={(e) => setEditProjData({ ...editProjData, deployUrl: e.target.value || null })}
+                      placeholder="배포 URL"
+                      className="rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => saveProjectEdit(proj.id)}
+                      className="rounded-lg bg-brand-primary px-3 py-1.5 text-meta font-medium text-white hover:opacity-90"
+                    >
+                      저장
+                    </button>
+                    <button
+                      onClick={() => setEditingProject(null)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-meta text-text-tertiary hover:text-text-primary"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* View Mode */
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-base text-white ${proj.gradient}`}>
+                      {proj.icon}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-card-desc font-medium">{proj.name}</span>
+                        {proj.githubUrl && (
+                          <a href={proj.githubUrl} target="_blank" rel="noopener noreferrer" className="text-text-muted hover:text-brand-primary">
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </div>
+                      <div className="text-meta text-text-muted">
+                        {proj.description || "설명 없음"}
+                        {proj.tags.length > 0 && (
+                          <span className="ml-2">
+                            {proj.tags.map((t) => (
+                              <span key={t} className="mr-1 rounded bg-bg-secondary px-1.5 py-0.5 text-[0.65rem]">
+                                {t}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingProject(proj.id);
+                        setEditProjData({});
+                      }}
+                      className="rounded px-2 py-1 text-meta text-text-tertiary transition-colors hover:bg-bg-secondary hover:text-text-primary"
+                    >
+                      편집
+                    </button>
+                    <button
+                      onClick={() => deleteProject(proj.id)}
+                      className="rounded p-1 text-text-muted hover:text-cat-casual"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {projects.length === 0 && (
+            <div className="px-4 py-6 text-center text-meta text-text-muted">
+              등록된 프로젝트가 없습니다.
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* ── 6. GitHub 감시 레포 ── */}
       <Section title="GitHub 감시 레포" icon={GitBranch}>
         {/* 액션 버튼 */}
         <div className="mb-4 flex flex-wrap gap-2">

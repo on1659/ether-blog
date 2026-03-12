@@ -92,6 +92,23 @@ model DailyAnalytics {
   @@index([postId])
 }
 
+model Project {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String   @default("📦")
+  gradient    String   @default("from-[#3182F6] to-[#1D4ED8]")
+  tags        String[]
+  githubUrl   String?
+  deployUrl   String?
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+}
+
 model Setting {
   key       String   @id
   value     String

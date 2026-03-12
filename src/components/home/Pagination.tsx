@@ -7,14 +7,21 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   category?: string;
+  /** Additional query params to preserve (e.g. { project: "foo" }) */
+  extraParams?: Record<string, string>;
 }
 
-export const Pagination = ({ currentPage, totalPages, category }: PaginationProps) => {
+export const Pagination = ({ currentPage, totalPages, category, extraParams }: PaginationProps) => {
   const pathname = usePathname();
 
   const buildHref = (page: number) => {
     const params = new URLSearchParams();
     if (category && category !== "all") params.set("category", category);
+    if (extraParams) {
+      for (const [k, v] of Object.entries(extraParams)) {
+        if (v) params.set(k, v);
+      }
+    }
     if (page > 1) params.set("page", String(page));
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;

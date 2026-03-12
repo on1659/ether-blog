@@ -1,12 +1,54 @@
+export const revalidate = 3600;
+
 import { Github, Mail, Rss } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "About" };
 
-const AboutPage = () => {
-  const { author, projects, techStack } = siteConfig;
+const PAGE_SIZE = 8;
+
+const getProjects = async (page = 1) => {
+  try {
+    const [items, total] = await Promise.all([
+      prisma.project.findMany({
+        where: { active: true },
+        orderBy: { order: "asc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.project.count({ where: { active: true } }),
+    ]);
+    return { items, totalPages: Math.ceil(total / PAGE_SIZE) };
+  } catch {
+    return { items: [], totalPages: 0 };
+  }
+};
+
+const AboutPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) => {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page) || 1);
+  const { author, techStack } = siteConfig;
+  const { items: dbProjects, totalPages } = await getProjects(page);
+
+  // DB에 프로젝트가 있으면 DB 사용, 없으면 site.ts 폴백
+  const projects = dbProjects.length > 0
+    ? dbProjects.map((p) => ({
+        name: p.name,
+        description: p.description || "",
+        icon: p.icon,
+        gradient: p.gradient,
+        tags: p.tags,
+        githubUrl: p.githubUrl,
+        deployUrl: p.deployUrl,
+      }))
+    : siteConfig.projects.map((p) => ({ ...p, githubUrl: null, deployUrl: null }));
 
   return (
     <>
@@ -57,36 +99,60 @@ const AboutPage = () => {
         <h2 id="projects" className="mb-4 text-sub-heading tracking-[-0.01em]">
           프로젝트
         </h2>
-        <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {projects.map((proj) => (
-            <div
-              key={proj.name}
-              className="rounded-xl border border-border p-5 transition-all duration-base hover:-translate-y-0.5 hover:border-brand-primary"
-            >
-              <div
-                className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-base text-white ${proj.gradient}`}
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {projects.map((proj) => {
+            const Wrapper = proj.githubUrl ? "a" : "div";
+            const wrapperProps = proj.githubUrl
+              ? { href: proj.githubUrl, target: "_blank", rel: "noopener noreferrer" }
+              : {};
+            return (
+              <Wrapper
+                key={proj.name}
+                {...wrapperProps}
+                className="block rounded-xl border border-border p-5 transition-all duration-base hover:-translate-y-0.5 hover:border-brand-primary"
               >
-                {proj.icon}
-              </div>
-              <div className="mb-1 text-[0.9375rem] font-semibold">
-                {proj.name}
-              </div>
-              <div className="mb-2.5 text-meta leading-[1.5] text-text-tertiary">
-                {proj.description}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {proj.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded bg-bg-secondary px-[7px] py-0.5 text-[0.6875rem] font-medium text-text-tertiary"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+                <div
+                  className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-base text-white ${proj.gradient}`}
+                >
+                  {proj.icon}
+                </div>
+                <div className="mb-1 text-[0.9375rem] font-semibold">
+                  {proj.name}
+                </div>
+                <div className="mb-2.5 text-meta leading-[1.5] text-text-tertiary">
+                  {proj.description}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {proj.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded bg-bg-secondary px-[7px] py-0.5 text-[0.6875rem] font-medium text-text-tertiary"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </Wrapper>
+            );
+          })}
         </div>
+        {totalPages > 1 && (
+          <div className="mb-12 flex justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <Link
+                key={p}
+                href={`/about?page=${p}`}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  p === page
+                    ? "bg-text-primary text-bg-primary"
+                    : "text-text-tertiary hover:bg-card-hover hover:text-text-primary"
+                }`}
+              >
+                {p}
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* 기술 스택 */}
         <h2 className="mb-4 text-sub-heading tracking-[-0.01em]">기술 스택</h2>
