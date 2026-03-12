@@ -57,6 +57,7 @@ const AI_MODELS: Record<string, { label: string; value: string }[]> = {
     { label: "Grok 3 Mini", value: "grok-3-mini" },
   ],
   zai: [
+    { label: "GLM-5", value: "glm-5" },
     { label: "GLM-4", value: "glm-4" },
     { label: "GLM-4 Plus", value: "glm-4-plus" },
   ],
