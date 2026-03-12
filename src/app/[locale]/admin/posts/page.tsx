@@ -12,6 +12,7 @@ const AdminPostsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [categoryModal, setCategoryModal] = useState<string[] | null>(null);
   const [editModal, setEditModal] = useState<PostMeta | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -233,9 +234,17 @@ const AdminPostsPage = () => {
                       minute: "2-digit",
                     })}
                   </td>
-                  <td className="relative px-4 py-3">
+                  <td className="px-4 py-3">
                     <button
-                      onClick={() => setMenuOpen(menuOpen === post.id ? null : post.id)}
+                      onClick={(e) => {
+                        if (menuOpen === post.id) {
+                          setMenuOpen(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMenuPos({ top: rect.bottom + 4, left: rect.right - 160 });
+                          setMenuOpen(post.id);
+                        }
+                      }}
                       className="rounded p-1 text-text-muted transition-colors hover:bg-bg-tertiary hover:text-text-primary"
                     >
                       <MoreVertical size={16} />
@@ -243,7 +252,8 @@ const AdminPostsPage = () => {
                     {menuOpen === post.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-4 top-full z-10 min-w-[160px] overflow-hidden rounded-lg border border-border bg-bg-primary shadow-lg"
+                        className="fixed z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-bg-primary shadow-lg"
+                        style={{ top: menuPos.top, left: menuPos.left }}
                       >
                         <button
                           onClick={() => {
