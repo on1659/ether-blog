@@ -107,7 +107,7 @@ async function main() {
 
         // Call z.ai
         const response = await ai.chat.completions.create({
-          model: "glm-4-plus",
+          model: "glm-4.7-flash",
           max_tokens: 2000,
           messages: [
             { role: "system", content: BRIEF_PROMPT },

@@ -127,7 +127,7 @@ export const generateBlogContent = async ({
   }
 
   const response = await getClient().chat.completions.create({
-    model: "glm-4-plus",
+    model: "glm-4.7-flash",
     max_tokens: brief ? 2000 : 8000,
     messages: [
       { role: "system", content: systemPrompt },
