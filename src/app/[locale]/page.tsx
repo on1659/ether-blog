@@ -5,6 +5,7 @@ import Link from "next/link";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryFilter } from "@/components/home/CategoryFilter";
 import { RecentPostsSidebar } from "@/components/home/RecentPostsSidebar";
+import { Pagination } from "@/components/home/Pagination";
 import { PostList } from "@/components/post/PostList";
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/i18n";
@@ -12,50 +13,62 @@ import { isValidLocale, i18n } from "@/i18n/config";
 import type { Category } from "@/types";
 import type { Locale } from "@/i18n/config";
 
-const getPosts = async (category?: string) => {
+const PAGE_SIZE = 10;
+
+const getPosts = async (category?: string, page = 1) => {
   try {
     const where: Record<string, unknown> = { published: true };
     if (category && category !== "all") {
       where.category = category as Category;
+    } else {
+      // "전체"에서는 commits 제외
+      where.category = { not: "commits" };
     }
 
-    const posts = await prisma.post.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        subtitle: true,
-        excerpt: true,
-        category: true,
-        coverImage: true,
-        tags: true,
-        readingTime: true,
-        createdAt: true,
-        published: true,
-        featured: true,
-        commitHash: true,
-        commitUrl: true,
-        repoName: true,
-        filesChanged: true,
-      },
-    });
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          subtitle: true,
+          excerpt: true,
+          category: true,
+          coverImage: true,
+          tags: true,
+          readingTime: true,
+          createdAt: true,
+          published: true,
+          featured: true,
+          commitHash: true,
+          commitUrl: true,
+          repoName: true,
+          filesChanged: true,
+        },
+      }),
+      prisma.post.count({ where }),
+    ]);
 
-    return posts.map((p) => ({
-      ...p,
-      createdAt: p.createdAt.toISOString(),
-      subtitle: p.subtitle ?? undefined,
-      excerpt: p.excerpt ?? undefined,
-      coverImage: p.coverImage ?? undefined,
-      commitHash: p.commitHash ?? undefined,
-      commitUrl: p.commitUrl ?? undefined,
-      repoName: p.repoName ?? undefined,
-      filesChanged: p.filesChanged ?? undefined,
-    }));
+    return {
+      posts: posts.map((p) => ({
+        ...p,
+        createdAt: p.createdAt.toISOString(),
+        subtitle: p.subtitle ?? undefined,
+        excerpt: p.excerpt ?? undefined,
+        coverImage: p.coverImage ?? undefined,
+        commitHash: p.commitHash ?? undefined,
+        commitUrl: p.commitUrl ?? undefined,
+        repoName: p.repoName ?? undefined,
+        filesChanged: p.filesChanged ?? undefined,
+      })),
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    };
   } catch {
-    return [];
+    return { posts: [], totalPages: 0 };
   }
 };
 
@@ -64,13 +77,14 @@ const Home = async ({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; page?: string }>;
 }) => {
   const { locale: rawLocale } = await params;
   const locale: Locale = isValidLocale(rawLocale) ? rawLocale : i18n.defaultLocale;
   const dict = await getDictionary(locale);
   const sp = await searchParams;
-  const posts = await getPosts(sp.category);
+  const page = Math.max(1, Number(sp.page) || 1);
+  const { posts, totalPages } = await getPosts(sp.category, page);
 
   const prefix = locale === "ko" ? "" : `/${locale}`;
 
@@ -97,6 +111,9 @@ const Home = async ({
       <div className="mx-auto flex max-w-container flex-col gap-8 px-8 pb-16 pt-6 lg:flex-row">
         <div className="min-w-0 flex-1">
           <PostList posts={posts} bare />
+          {totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} category={sp.category} />
+          )}
         </div>
         <RecentPostsSidebar posts={posts} title={dict.home.recentSidebar} />
       </div>
