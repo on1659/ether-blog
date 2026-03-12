@@ -19,15 +19,16 @@ export const GET = async (req: NextRequest) => {
     // 기간 내 총 조회수
     const totalResult = await prisma.dailyAnalytics.aggregate({
       where: { date: { gte: since } },
-      _sum: { views: true },
+      _sum: { views: true, botViews: true },
     });
     const totalViews = totalResult._sum.views || 0;
+    const totalBotViews = totalResult._sum.botViews || 0;
 
     // 글별 조회수 Top 10
     const topPostsRaw = await prisma.dailyAnalytics.groupBy({
       by: ["postId"],
       where: { date: { gte: since } },
-      _sum: { views: true },
+      _sum: { views: true, botViews: true },
       orderBy: { _sum: { views: "desc" } },
       take: 10,
     });
@@ -46,6 +47,7 @@ export const GET = async (req: NextRequest) => {
         slug: post?.slug || "",
         category: post?.category || "",
         views: p._sum.views || 0,
+        botViews: p._sum.botViews || 0,
       };
     });
 
@@ -53,13 +55,14 @@ export const GET = async (req: NextRequest) => {
     const dailyRaw = await prisma.dailyAnalytics.groupBy({
       by: ["date"],
       where: { date: { gte: since } },
-      _sum: { views: true },
+      _sum: { views: true, botViews: true },
       orderBy: { date: "asc" },
     });
 
     const daily = dailyRaw.map((d) => ({
       date: d.date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" }),
       views: d._sum.views || 0,
+      botViews: d._sum.botViews || 0,
     }));
 
     // 카테고리별 조회수
@@ -79,7 +82,7 @@ export const GET = async (req: NextRequest) => {
 
     return NextResponse.json({
       success: true,
-      data: { totalViews, topPosts, daily, byCategory },
+      data: { totalViews, totalBotViews, topPosts, daily, byCategory },
     });
   } catch (error) {
     return NextResponse.json({

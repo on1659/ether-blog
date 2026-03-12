@@ -105,7 +105,7 @@ export const processCommits = async (
       const readingTime = calculateReadingTime(content);
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
 
-      await prisma.post.create({
+      const post = await prisma.post.create({
         data: {
           title,
           content,
@@ -121,6 +121,12 @@ export const processCommits = async (
           projectSlug: repo.toLowerCase(),
           filesChanged: detail.files.length,
         },
+      });
+
+      // 텍스트 기반 썸네일 URL 세팅 (API route에서 동적 생성)
+      await prisma.post.update({
+        where: { id: post.id },
+        data: { coverImage: `/api/thumbnail/${post.id}` },
       });
 
       processed++;

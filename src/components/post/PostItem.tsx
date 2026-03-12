@@ -19,13 +19,22 @@ export const PostItem = ({ post }: { post: PostMeta }) => {
     >
       {/* Thumbnail */}
       <div className="h-[180px] w-full flex-shrink-0 overflow-hidden rounded-xl md:h-[130px] md:w-[200px]">
-        <div
-          className={`flex h-full w-full items-end bg-gradient-to-br p-3 ${gradient}`}
-        >
-          <span className="font-code text-xs text-white/60">
-            {post.repoName || post.category}
-          </span>
-        </div>
+        {post.coverImage ? (
+          <img
+            src={post.coverImage}
+            alt={post.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className={`flex h-full w-full items-end bg-gradient-to-br p-3 ${gradient}`}
+          >
+            <span className="font-code text-xs text-white/60">
+              {post.repoName || post.category}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Info */}

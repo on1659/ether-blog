@@ -15,8 +15,9 @@ model Post {
   content     String
   excerpt     String?
   category    Category
-  coverImage  String?
-  published   Boolean  @default(false)
+  coverImage     String?
+  thumbnailData  String?   // base64 encoded thumbnail image
+  published      Boolean  @default(false)
   featured    Boolean  @default(false)
   readingTime Int      @default(0)
   tags        String[]
@@ -37,8 +38,9 @@ model Post {
   seriesOrder Int?
 
   // 조회수
-  viewCount   Int      @default(0)
-  analytics   DailyAnalytics[]
+  viewCount      Int      @default(0)
+  botViewCount   Int      @default(0)
+  analytics      DailyAnalytics[]
 
   @@index([category])
   @@index([published])
@@ -84,8 +86,9 @@ model DailyAnalytics {
   id     String   @id @default(cuid())
   postId String
   post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  date   DateTime @db.Date
-  views  Int      @default(0)
+  date     DateTime @db.Date
+  views    Int      @default(0)
+  botViews Int      @default(0)
 
   @@unique([postId, date])
   @@index([date])

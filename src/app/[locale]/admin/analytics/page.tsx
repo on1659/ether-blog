@@ -10,12 +10,14 @@ interface PostStat {
   title: string;
   slug: string;
   views: number;
+  botViews: number;
   category: string;
 }
 
 interface DailyStat {
   date: string;
   views: number;
+  botViews: number;
 }
 
 interface CategoryStat {
@@ -28,6 +30,7 @@ const AnalyticsPage = () => {
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [totalViews, setTotalViews] = useState(0);
+  const [totalBotViews, setTotalBotViews] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
 
   useEffect(() => {
@@ -40,6 +43,7 @@ const AnalyticsPage = () => {
           setDailyStats(data.data.daily || []);
           setCategoryStats(data.data.byCategory || []);
           setTotalViews(data.data.totalViews || 0);
+          setTotalBotViews(data.data.totalBotViews || 0);
         }
       } catch { /* silent */ }
     };
@@ -65,9 +69,19 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Total views */}
-      <div className="mb-8 rounded-xl border border-border p-6">
-        <div className="text-3xl font-bold">{totalViews.toLocaleString()}</div>
-        <div className="text-meta text-text-tertiary">최근 {period}일 조회수</div>
+      <div className="mb-8 grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-border p-6">
+          <div className="text-3xl font-bold">{totalViews.toLocaleString()}</div>
+          <div className="text-meta text-text-tertiary">사람 조회수 ({period}일)</div>
+        </div>
+        <div className="rounded-xl border border-border p-6">
+          <div className="text-3xl font-bold text-text-secondary">{totalBotViews.toLocaleString()}</div>
+          <div className="text-meta text-text-tertiary">봇 조회수 ({period}일)</div>
+        </div>
+        <div className="rounded-xl border border-border p-6">
+          <div className="text-3xl font-bold text-brand-primary">{(totalViews + totalBotViews).toLocaleString()}</div>
+          <div className="text-meta text-text-tertiary">전체 조회수 ({period}일)</div>
+        </div>
       </div>
 
       {/* Daily chart */}
@@ -87,7 +101,8 @@ const AnalyticsPage = () => {
                   fontSize: 13,
                 }}
               />
-              <Bar dataKey="views" fill="#3182F6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="views" stackId="a" fill="#3182F6" radius={[0, 0, 0, 0]} name="사람" />
+              <Bar dataKey="botViews" stackId="a" fill="#94A3B8" radius={[4, 4, 0, 0]} name="봇" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -130,7 +145,12 @@ const AnalyticsPage = () => {
                   <div className="truncate text-card-desc font-medium">{post.title}</div>
                   <div className="text-meta text-text-tertiary">{post.category}</div>
                 </div>
-                <span className="text-card-desc font-semibold">{post.views.toLocaleString()}</span>
+                <div className="text-right">
+                  <span className="text-card-desc font-semibold">{post.views.toLocaleString()}</span>
+                  {post.botViews > 0 && (
+                    <span className="ml-2 text-meta text-text-muted">+{post.botViews.toLocaleString()} 봇</span>
+                  )}
+                </div>
               </div>
             ))
           )}
