@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Plus, Trash2, GitBranch, Copy, Check, Info, RefreshCw, Webhook,
-  Shield, Server, Bot, Save, ChevronDown, ChevronUp,
+  Shield, Server, Bot, Save, ChevronDown, ChevronUp, Key, Eye, EyeOff,
 } from "lucide-react";
 
 /* ───── Types ───── */
@@ -16,6 +16,15 @@ interface RepoItem {
   active: boolean;
   autoPublish: boolean;
   promptTemplate: string | null;
+}
+
+interface ApiKeyItem {
+  id: string;
+  name: string;
+  key: string;
+  active: boolean;
+  lastUsed: string | null;
+  createdAt: string;
 }
 
 interface EnvItem {
@@ -109,6 +118,13 @@ const AdminSettingsPage = () => {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  // api keys
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+
   // repos
   const [repos, setRepos] = useState<RepoItem[]>([]);
   const [repoOwner, setRepoOwner] = useState("");
@@ -154,6 +170,16 @@ const AdminSettingsPage = () => {
     }
   };
 
+  const fetchApiKeys = async () => {
+    try {
+      const res = await fetch("/api/admin/api-keys");
+      const data = await res.json();
+      if (data.success) setApiKeys(data.data);
+    } catch {
+      /* silent */
+    }
+  };
+
   const fetchRepos = async () => {
     try {
       const res = await fetch("/api/admin/repos");
@@ -167,6 +193,7 @@ const AdminSettingsPage = () => {
   useEffect(() => {
     fetchEnvStatus();
     fetchSettings();
+    fetchApiKeys();
     fetchRepos();
   }, []);
 
@@ -196,6 +223,58 @@ const AdminSettingsPage = () => {
       setSettingsSaving(false);
     }
   };
+
+  /* ───── API Key actions ───── */
+
+  const createApiKey = async () => {
+    if (!newKeyName.trim()) return;
+    try {
+      const res = await fetch("/api/admin/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newKeyName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewlyCreatedKey(data.data.key);
+        setNewKeyName("");
+        fetchApiKeys();
+      }
+    } catch {
+      alert("API Key 생성에 실패했습니다.");
+    }
+  };
+
+  const deactivateApiKey = async (id: string) => {
+    if (!confirm("이 API Key를 비활성화하시겠습니까?")) return;
+    try {
+      await fetch("/api/admin/api-keys", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      fetchApiKeys();
+    } catch {
+      alert("API Key 비활성화에 실패했습니다.");
+    }
+  };
+
+  const copyApiKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const toggleKeyVisibility = (id: string) => {
+    setVisibleKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const maskKey = (key: string) => key.slice(0, 6) + "••••••••" + key.slice(-4);
 
   /* ───── Repo actions ───── */
 
@@ -389,7 +468,126 @@ const AdminSettingsPage = () => {
         </div>
       </Section>
 
-      {/* ── 3. AI 글 생성 설정 ── */}
+      {/* ── 3. API Key 관리 ── */}
+      <Section title="API Key 관리" icon={Key}>
+        <p className="mb-4 text-meta text-text-tertiary">
+          외부에서 <code className="font-code text-text-secondary">/api/v1/posts</code>로 글을 발행할 때 사용하는 Bearer 토큰입니다.
+        </p>
+
+        {/* 새 키 생성 알림 */}
+        {newlyCreatedKey && (
+          <div className="mb-4 rounded-lg border border-cat-commits bg-[rgba(0,196,113,0.08)] p-4">
+            <p className="mb-2 text-meta font-semibold text-cat-commits">
+              새 API Key가 생성되었습니다. 이 키는 다시 볼 수 없으니 지금 복사해주세요.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 break-all rounded bg-bg-secondary px-3 py-2 font-code text-code-block text-text-primary">
+                {newlyCreatedKey}
+              </code>
+              <button
+                onClick={() => copyApiKey(newlyCreatedKey)}
+                className="flex shrink-0 items-center gap-1 rounded px-2 py-1 text-meta text-text-tertiary transition-colors hover:text-brand-primary"
+              >
+                {copiedKey === newlyCreatedKey ? (
+                  <><Check size={14} /> 복사됨</>
+                ) : (
+                  <><Copy size={14} /> 복사</>
+                )}
+              </button>
+            </div>
+            <button
+              onClick={() => setNewlyCreatedKey(null)}
+              className="mt-2 text-meta text-text-muted hover:text-text-secondary"
+            >
+              닫기
+            </button>
+          </div>
+        )}
+
+        {/* 새 키 생성 폼 */}
+        <div className="mb-4 flex gap-2">
+          <input
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            placeholder="키 이름 (예: 외부 파트너, CI/CD)"
+            onKeyDown={(e) => e.key === "Enter" && createApiKey()}
+            className="flex-1 rounded-lg border border-border bg-bg-primary px-3 py-2 text-card-desc outline-none focus:border-brand-primary"
+          />
+          <button
+            onClick={createApiKey}
+            className="flex items-center gap-1 rounded-lg bg-brand-primary px-4 py-2 text-meta font-medium text-white transition-opacity hover:opacity-90"
+          >
+            <Plus size={14} /> 생성
+          </button>
+        </div>
+
+        {/* 키 목록 */}
+        <div className="divide-y divide-border-light rounded-lg border border-border">
+          {apiKeys.map((ak) => (
+            <div key={ak.id} className={`px-4 py-3 ${!ak.active ? "opacity-50" : ""}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-card-desc font-medium">{ak.name}</span>
+                    {!ak.active && (
+                      <span className="rounded bg-[rgba(255,107,53,0.12)] px-1.5 py-0.5 text-[0.65rem] font-medium text-cat-casual">
+                        비활성
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <code className="font-code text-[0.8rem] text-text-muted">
+                      {visibleKeys.has(ak.id) ? ak.key : maskKey(ak.key)}
+                    </code>
+                    <button
+                      onClick={() => toggleKeyVisibility(ak.id)}
+                      className="text-text-muted hover:text-text-secondary"
+                    >
+                      {visibleKeys.has(ak.id) ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                    <button
+                      onClick={() => copyApiKey(ak.key)}
+                      className="text-text-muted hover:text-brand-primary"
+                    >
+                      {copiedKey === ak.key ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                  <div className="mt-1 text-meta text-text-muted">
+                    생성: {new Date(ak.createdAt).toLocaleDateString("ko-KR")}
+                    {ak.lastUsed && ` · 최근 사용: ${new Date(ak.lastUsed).toLocaleDateString("ko-KR")}`}
+                  </div>
+                </div>
+                {ak.active && (
+                  <button
+                    onClick={() => deactivateApiKey(ak.id)}
+                    className="rounded p-1 text-text-muted hover:text-cat-casual"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {apiKeys.length === 0 && (
+            <div className="px-4 py-6 text-center text-meta text-text-muted">
+              등록된 API Key가 없습니다. 위에서 새 키를 생성해주세요.
+            </div>
+          )}
+        </div>
+
+        {/* 사용 가이드 */}
+        <div className="mt-4 rounded-lg border border-border bg-bg-secondary p-4 text-card-desc text-text-secondary">
+          <p className="mb-1 font-semibold text-text-primary">사용 방법</p>
+          <code className="block whitespace-pre-wrap font-code text-[0.8rem] text-text-muted">
+            {`curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/posts \\
+  -H "Authorization: Bearer eb_xxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"title":"제목","content":"본문","category":"articles"}'`}
+          </code>
+        </div>
+      </Section>
+
+      {/* ── 4. AI 글 생성 설정 ── */}
       <Section title="AI 글 생성 설정" icon={Bot}>
         <div className="space-y-6">
           {/* 1차: 프로바이더 선택 */}
