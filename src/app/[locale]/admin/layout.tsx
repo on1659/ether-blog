@@ -19,22 +19,39 @@ const AdminLayout = async ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <div className="mx-auto flex max-w-container gap-8 px-8 py-8">
-      <aside className="hidden w-[200px] flex-shrink-0 md:block">
-        <nav className="sticky top-[80px] space-y-1">
-          {adminNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-card-desc font-medium text-text-secondary transition-all duration-base hover:bg-bg-secondary hover:text-text-primary"
-            >
-              <item.icon size={16} />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <main className="min-w-0 flex-1">{children}</main>
+    <div className="mx-auto max-w-container px-4 py-6 md:px-8 md:py-8">
+      {/* 모바일: 상단 가로 탭 */}
+      <nav className="mb-6 flex gap-1 overflow-x-auto md:hidden">
+        {adminNav.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-meta font-medium text-text-secondary transition-all hover:bg-bg-secondary hover:text-text-primary"
+          >
+            <item.icon size={14} />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="flex gap-8">
+        {/* 데스크톱: 사이드바 */}
+        <aside className="hidden w-[200px] flex-shrink-0 md:block">
+          <nav className="sticky top-[80px] space-y-1">
+            {adminNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-card-desc font-medium text-text-secondary transition-all duration-base hover:bg-bg-secondary hover:text-text-primary"
+              >
+                <item.icon size={16} />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </aside>
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
     </div>
   );
 };
