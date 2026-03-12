@@ -13,7 +13,8 @@ import { ViewTracker } from "./ViewTracker";
 import type { Category } from "@/types";
 import Link from "next/link";
 
-const getPost = cache(async (slug: string) => {
+const getPost = cache(async (rawSlug: string) => {
+  const slug = decodeURIComponent(rawSlug);
   return prisma.post.findUnique({ where: { slug } }).catch(() => null);
 });
 
