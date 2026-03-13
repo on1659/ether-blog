@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus } from "lucide-react";
+import Link from "next/link";
 import type { PostMeta } from "@/types";
 
 const CATEGORIES = ["commits", "articles", "techlab", "casual"] as const;
@@ -137,6 +138,13 @@ const AdminPostsPage = () => {
             <ListOrdered size={13} />
             번호 재정렬
           </button>
+          <Link
+            href="/admin/posts/new"
+            className="flex items-center gap-1 rounded-lg bg-brand-primary px-3 py-1 text-meta font-semibold text-white transition-colors hover:opacity-90"
+          >
+            <Plus size={13} />
+            글쓰기
+          </Link>
         </div>
         {selectedCount > 0 && (
           <div className="flex items-center gap-2">
@@ -239,17 +247,25 @@ const AdminPostsPage = () => {
                       {post.title}
                     </a>
                   </td>
-                  <td className="px-4 py-3 text-meta text-text-tertiary">{post.category}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded px-2 py-0.5 text-[0.6875rem] font-semibold ${
+                  <td className="whitespace-nowrap px-4 py-3 text-meta text-text-tertiary">{post.category}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <button
+                      onClick={async () => {
+                        await fetch(`/api/admin/posts/${post.id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ published: !post.published }),
+                        });
+                        fetchPosts();
+                      }}
+                      className={`rounded px-2 py-0.5 text-[0.6875rem] font-semibold transition-colors ${
                         post.published
-                          ? "bg-[rgba(0,196,113,0.12)] text-cat-commits"
-                          : "bg-bg-tertiary text-text-muted"
+                          ? "bg-[rgba(0,196,113,0.12)] text-cat-commits hover:bg-[rgba(0,196,113,0.25)]"
+                          : "bg-bg-tertiary text-text-muted hover:bg-bg-secondary"
                       }`}
                     >
-                      {post.published ? "발행" : "임시저장"}
-                    </span>
+                      {post.published ? "발행" : "미발행"}
+                    </button>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-meta text-text-tertiary">
                     {new Date(post.createdAt).toLocaleString("ko-KR", {
