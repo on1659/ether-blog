@@ -4,8 +4,10 @@ export interface PostMeta {
   id: string;
   slug: string;
   title: string;
+  titleEn?: string;
   subtitle?: string;
   excerpt?: string;
+  excerptEn?: string;
   category: Category;
   coverImage?: string;
   tags: string[];
@@ -17,10 +19,12 @@ export interface PostMeta {
   commitUrl?: string;
   repoName?: string;
   filesChanged?: number;
+  hasEnglish?: boolean;
 }
 
 export interface PostDetail extends PostMeta {
   content: string;
+  contentEn?: string;
   seriesId?: string;
   seriesOrder?: number;
 }

@@ -11,9 +11,12 @@ model Post {
   id          String   @id @default(cuid())
   slug        String   @unique
   title       String
+  titleEn     String?
   subtitle    String?
   content     String
+  contentEn   String?
   excerpt     String?
+  excerptEn   String?
   category    Category
   coverImage     String?
   thumbnailData  String?   // base64 encoded thumbnail image

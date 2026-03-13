@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { renderMarkdown, extractHeadings } from "@/lib/markdown";
 import { PostDetailHeader } from "@/components/post/PostDetail";
 import { TableOfContents } from "@/components/post/TableOfContents";
+import { LanguageToggle } from "@/components/post/LanguageToggle";
 import { PostNav } from "@/components/post/PostNav";
 import { GiscusComments } from "@/components/post/GiscusComments";
 import { ViewTracker } from "./ViewTracker";
@@ -47,8 +48,11 @@ const PostPage = async ({ params }: PageProps) => {
 
   if (!post || !post.published) notFound();
 
+  const hasEnglish = !!post.contentEn;
   const headings = extractHeadings(post.content);
   const content = await renderMarkdown(post.content);
+  const headingsEn = hasEnglish ? extractHeadings(post.contentEn!) : [];
+  const contentEn = hasEnglish ? await renderMarkdown(post.contentEn!) : null;
 
   // 이전/다음 글
   const [prev, next] = await Promise.all([
@@ -114,28 +118,73 @@ const PostPage = async ({ params }: PageProps) => {
         readingTime={post.readingTime}
       />
 
-      <div className="mx-auto flex max-w-[1000px] gap-12 px-5 sm:px-8">
-        <article className="prose prose-lg max-w-content flex-1 pb-20 pt-10 dark:prose-invert">
-          {content}
+      {hasEnglish && contentEn ? (
+        <LanguageToggle
+          contentKo={
+            <>
+              {content}
+              {post.tags.length > 0 && (
+                <div className="mt-12 flex flex-wrap gap-2 border-t border-border pt-8 not-prose">
+                  {post.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/tag/${tag}`}
+                      className="rounded-full border border-border px-3.5 py-1.5 text-meta font-medium text-text-secondary transition-all duration-base hover:border-brand-primary hover:text-brand-primary"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+          contentEn={
+            <>
+              {contentEn}
+              {post.tags.length > 0 && (
+                <div className="mt-12 flex flex-wrap gap-2 border-t border-border pt-8 not-prose">
+                  {post.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/tag/${tag}`}
+                      className="rounded-full border border-border px-3.5 py-1.5 text-meta font-medium text-text-secondary transition-all duration-base hover:border-brand-primary hover:text-brand-primary"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+          headingsKo={headings}
+          headingsEn={headingsEn}
+          titleKo={post.title}
+          titleEn={post.titleEn || post.title}
+        />
+      ) : (
+        <div className="mx-auto flex max-w-[1000px] gap-12 px-5 sm:px-8">
+          <article className="prose prose-lg max-w-content flex-1 pb-20 pt-10 dark:prose-invert">
+            {content}
 
-          {/* Tags */}
-          {post.tags.length > 0 && (
-            <div className="mt-12 flex flex-wrap gap-2 border-t border-border pt-8 not-prose">
-              {post.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/tag/${tag}`}
-                  className="rounded-full border border-border px-3.5 py-1.5 text-meta font-medium text-text-secondary transition-all duration-base hover:border-brand-primary hover:text-brand-primary"
-                >
-                  {tag}
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
+            {/* Tags */}
+            {post.tags.length > 0 && (
+              <div className="mt-12 flex flex-wrap gap-2 border-t border-border pt-8 not-prose">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/tag/${tag}`}
+                    className="rounded-full border border-border px-3.5 py-1.5 text-meta font-medium text-text-secondary transition-all duration-base hover:border-brand-primary hover:text-brand-primary"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </article>
 
-        <TableOfContents headings={headings} />
-      </div>
+          <TableOfContents headings={headings} />
+        </div>
+      )}
 
       <PostNav
         prev={seriesPrev || prev}

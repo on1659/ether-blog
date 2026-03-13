@@ -59,8 +59,34 @@ Content-Type: application/json
 | \`commitHash\` | 커밋 해시 |
 | \`commitUrl\` | 커밋 URL |
 | \`filesChanged\` | 변경된 파일 수 |
+| \`titleEn\` | 영어 제목 (다국어 지원) |
+| \`contentEn\` | 영어 마크다운 본문 |
+| \`excerptEn\` | 영어 요약문 |
+
+## 다국어 (영어) 지원
+
+글을 발행할 때 영어 버전을 함께 보낼 수 있다. 영어 필드가 있으면 블로그에서 한국어/영어 전환 버튼이 표시된다.
+
+\`\`\`json
+{
+  "title": "한글 제목",
+  "content": "## 한글 본문\\n마크다운 내용...",
+  "titleEn": "English Title",
+  "contentEn": "## English Body\\nMarkdown content...",
+  "excerptEn": "English summary of the post.",
+  "category": "articles",
+  "tags": ["API"],
+  "published": true
+}
+\`\`\`
+
+- \`titleEn\`, \`contentEn\`, \`excerptEn\`은 모두 선택 필드다
+- 영어 필드가 없으면 한국어만 표시된다
+- 나중에 영어 버전을 추가하려면 PUT 요청으로 업데이트하면 된다
 
 ## curl 예시
+
+### 한국어만
 
 \`\`\`bash
 curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
@@ -69,6 +95,23 @@ curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
   -d '{
     "title": "테스트 글",
     "content": "## 제목\\n본문 내용입니다.",
+    "category": "articles",
+    "tags": ["test"],
+    "published": true
+  }'
+\`\`\`
+
+### 한국어 + 영어
+
+\`\`\`bash
+curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
+  -H "Authorization: Bearer sk-abc123..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "테스트 글",
+    "content": "## 제목\\n본문 내용입니다.",
+    "titleEn": "Test Post",
+    "contentEn": "## Title\\nThis is the body.",
     "category": "articles",
     "tags": ["test"],
     "published": true

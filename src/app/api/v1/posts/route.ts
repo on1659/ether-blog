@@ -71,7 +71,9 @@ export const POST = async (req: NextRequest) => {
     const body = await req.json();
     const {
       title,
+      titleEn,
       content,
+      contentEn,
       category,
       tags = [],
       coverImage,
@@ -79,6 +81,7 @@ export const POST = async (req: NextRequest) => {
       published = false,
       subtitle,
       excerpt,
+      excerptEn,
       projectSlug,
       commitHash,
       commitUrl,
@@ -101,9 +104,12 @@ export const POST = async (req: NextRequest) => {
     const post = await prisma.post.create({
       data: {
         title,
+        titleEn: titleEn || null,
         subtitle,
         content,
+        contentEn: contentEn || null,
         excerpt: finalExcerpt,
+        excerptEn: excerptEn || null,
         category,
         tags,
         slug: finalSlug,
