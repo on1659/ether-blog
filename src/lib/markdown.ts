@@ -2,6 +2,41 @@ import { compileMDX } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 import type { ReactElement } from "react";
+import type { Root, Element, Text } from "hast";
+import type { Plugin } from "unified";
+
+const getTextContent = (node: Element): string => {
+  let text = "";
+  for (const child of node.children) {
+    if (child.type === "text") text += (child as Text).value;
+    else if (child.type === "element") text += getTextContent(child as Element);
+  }
+  return text;
+};
+
+const toId = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣\s-]/g, "")
+    .replace(/\s+/g, "-");
+
+const rehypeHeadingIds: Plugin<[], Root> = () => (tree) => {
+  const visit = (node: Root | Element) => {
+    if ("children" in node) {
+      for (const child of node.children) {
+        if (child.type === "element") {
+          if (/^h[1-6]$/.test(child.tagName)) {
+            const text = getTextContent(child);
+            child.properties = child.properties || {};
+            child.properties.id = toId(text);
+          }
+          visit(child);
+        }
+      }
+    }
+  };
+  visit(tree);
+};
 
 export const renderMarkdown = async (source: string): Promise<ReactElement> => {
   const { content } = await compileMDX({
@@ -10,6 +45,7 @@ export const renderMarkdown = async (source: string): Promise<ReactElement> => {
       mdxOptions: {
         remarkPlugins: [remarkGfm],
         rehypePlugins: [
+          rehypeHeadingIds,
           [
             rehypePrettyCode,
             {
