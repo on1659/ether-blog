@@ -87,7 +87,7 @@ export const processCommits = async (
         patch: f.patch?.slice(0, 500),
       }));
 
-      const { title, content, tags } = await generateBlogContent({
+      const { title, content, titleEn, contentEn, tags } = await generateBlogContent({
         commitMessage: detail.message,
         diff: "",
         repoName: repo,
@@ -101,12 +101,16 @@ export const processCommits = async (
 
       const readingTime = calculateReadingTime(content);
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+      const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;
 
       const post = await prisma.post.create({
         data: {
           title,
+          titleEn: titleEn || null,
           content,
+          contentEn: contentEn || null,
           excerpt,
+          excerptEn,
           slug,
           category: "commits",
           tags,
