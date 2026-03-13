@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MoreVertical, Pencil, Trash2, FolderSync } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered } from "lucide-react";
 import type { PostMeta } from "@/types";
 
 const CATEGORIES = ["commits", "articles", "techlab", "casual"] as const;
@@ -118,7 +118,26 @@ const AdminPostsPage = () => {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-section-title">글 관리</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-section-title">글 관리</h1>
+          <button
+            onClick={async () => {
+              if (!confirm("모든 글의 slug를 숫자로 재정렬하시겠습니까?")) return;
+              const res = await fetch("/api/admin/posts/renumber", { method: "POST" });
+              const data = await res.json();
+              if (data.success) {
+                alert(`완료: ${data.data.updated}개 변경됨`);
+                fetchPosts();
+              } else {
+                alert("실패: " + data.error);
+              }
+            }}
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-meta font-medium text-text-tertiary transition-colors hover:bg-bg-secondary hover:text-text-primary"
+          >
+            <ListOrdered size={13} />
+            번호 재정렬
+          </button>
+        </div>
         {selectedCount > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-meta text-text-tertiary">{selectedCount}개 선택</span>

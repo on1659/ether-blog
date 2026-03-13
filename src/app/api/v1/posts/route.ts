@@ -5,13 +5,10 @@ import { authenticateApiKey } from "@/lib/api-auth";
 import { calculateReadingTime } from "@/lib/markdown";
 import type { ApiResponse } from "@/types";
 
-const toSlug = (title: string): string =>
-  title
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 100);
+const nextSlug = async (): Promise<string> => {
+  const count = await prisma.post.count();
+  return String(count + 1);
+};
 
 export const GET = async (req: NextRequest) => {
   try {
@@ -97,7 +94,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json(res, { status: 400 });
     }
 
-    const finalSlug = slug || toSlug(title);
+    const finalSlug = slug || await nextSlug();
     const readingTime = calculateReadingTime(content);
     const finalExcerpt = excerpt || content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
 
@@ -109,7 +106,6 @@ export const POST = async (req: NextRequest) => {
         excerpt: finalExcerpt,
         category,
         tags,
-        coverImage,
         slug: finalSlug,
         published,
         readingTime,
@@ -119,6 +115,13 @@ export const POST = async (req: NextRequest) => {
         repoName,
         filesChanged,
       },
+    });
+
+    // coverImage가 없으면 텍스트 기반 썸네일 자동 생성
+    const finalCoverImage = coverImage || `/api/thumbnail/${post.id}`;
+    await prisma.post.update({
+      where: { id: post.id },
+      data: { coverImage: finalCoverImage },
     });
 
     // published로 생성 시 ISR 캐시 즉시 갱신

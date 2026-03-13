@@ -96,11 +96,8 @@ export const processCommits = async (
         brief: true,
       });
 
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9가-힣\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .slice(0, 100);
+      const postCount = await prisma.post.count();
+      const slug = String(postCount + 1);
 
       const readingTime = calculateReadingTime(content);
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
@@ -110,7 +107,7 @@ export const processCommits = async (
           title,
           content,
           excerpt,
-          slug: `${slug}-${commit.id.slice(0, 7)}`,
+          slug,
           category: "commits",
           tags,
           readingTime,
