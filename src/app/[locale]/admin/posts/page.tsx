@@ -68,7 +68,7 @@ const AdminPostsPage = () => {
   const handleDelete = async (ids: string[]) => {
     if (!confirm(`${ids.length}개의 글을 삭제하시겠습니까?`)) return;
     try {
-      await Promise.all(ids.map((id) => fetch(`/api/v1/posts/${id}`, { method: "DELETE" })));
+      await Promise.all(ids.map((id) => fetch(`/api/admin/posts/${id}`, { method: "DELETE" })));
       setSelected(new Set());
       setMenuOpen(null);
       fetchPosts();
@@ -81,7 +81,7 @@ const AdminPostsPage = () => {
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch(`/api/v1/posts/${id}`, {
+          fetch(`/api/admin/posts/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ category }),
@@ -100,7 +100,7 @@ const AdminPostsPage = () => {
   const handleEditSave = async () => {
     if (!editModal) return;
     try {
-      await fetch(`/api/v1/posts/${editModal.id}`, {
+      await fetch(`/api/admin/posts/${editModal.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: editTitle }),
