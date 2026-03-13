@@ -4,6 +4,7 @@ import { useState, type ReactElement } from "react";
 import { TableOfContents } from "./TableOfContents";
 
 interface LanguageToggleProps {
+  defaultLang?: "ko" | "en";
   contentKo: ReactElement;
   contentEn: ReactElement;
   headingsKo: { id: string; text: string; level: number }[];
@@ -13,6 +14,7 @@ interface LanguageToggleProps {
 }
 
 export const LanguageToggle = ({
+  defaultLang = "ko",
   contentKo,
   contentEn,
   headingsKo,
@@ -20,7 +22,7 @@ export const LanguageToggle = ({
   titleKo,
   titleEn,
 }: LanguageToggleProps) => {
-  const [lang, setLang] = useState<"ko" | "en">("ko");
+  const [lang, setLang] = useState<"ko" | "en">(defaultLang);
 
   const isKo = lang === "ko";
 

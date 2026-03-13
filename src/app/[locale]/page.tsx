@@ -38,8 +38,10 @@ const getPosts = async (category?: string, project?: string, page = 1) => {
           id: true,
           slug: true,
           title: true,
+          titleEn: true,
           subtitle: true,
           excerpt: true,
+          excerptEn: true,
           category: true,
           coverImage: true,
           tags: true,
@@ -51,6 +53,7 @@ const getPosts = async (category?: string, project?: string, page = 1) => {
           commitUrl: true,
           repoName: true,
           filesChanged: true,
+          contentEn: true,
         },
       }),
       prisma.post.count({ where }),
@@ -62,11 +65,14 @@ const getPosts = async (category?: string, project?: string, page = 1) => {
         createdAt: p.createdAt.toISOString(),
         subtitle: p.subtitle ?? undefined,
         excerpt: p.excerpt ?? undefined,
+        excerptEn: p.excerptEn ?? undefined,
+        titleEn: p.titleEn ?? undefined,
         coverImage: p.coverImage ?? undefined,
         commitHash: p.commitHash ?? undefined,
         commitUrl: p.commitUrl ?? undefined,
         repoName: p.repoName ?? undefined,
         filesChanged: p.filesChanged ?? undefined,
+        hasEnglish: !!p.contentEn,
       })),
       totalPages: Math.ceil(total / PAGE_SIZE),
     };
@@ -128,7 +134,7 @@ const Home = async ({
 
       <div className="mx-auto flex max-w-container flex-col gap-8 px-5 sm:px-8 pb-16 pt-6 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <PostList posts={posts} bare />
+          <PostList posts={posts} bare locale={locale} />
           {totalPages > 1 && (
             <Pagination
               currentPage={page}

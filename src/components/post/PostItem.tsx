@@ -9,8 +9,12 @@ const gradientMap = {
   casual: "from-[#6B2A10] to-[#FF6B35]",
 } as const;
 
-export const PostItem = ({ post }: { post: PostMeta }) => {
+export const PostItem = ({ post, locale = "ko" }: { post: PostMeta; locale?: string }) => {
   const gradient = gradientMap[post.category];
+  const isEn = locale === "en" && post.hasEnglish;
+  const title = isEn && post.titleEn ? post.titleEn : post.title;
+  const excerpt = isEn && post.excerptEn ? post.excerptEn : post.excerpt;
+  const dateLocale = locale === "en" ? "en-US" : "ko-KR";
 
   return (
     <Link
@@ -22,7 +26,7 @@ export const PostItem = ({ post }: { post: PostMeta }) => {
         {post.coverImage ? (
           <img
             src={post.coverImage}
-            alt={post.title}
+            alt={title}
             className="h-full w-full object-cover"
             loading="lazy"
           />
@@ -48,15 +52,18 @@ export const PostItem = ({ post }: { post: PostMeta }) => {
           )}
         </div>
         <h3 className="mb-1.5 line-clamp-2 text-card-title tracking-[-0.01em]">
-          {post.title}
+          {title}
         </h3>
         <p className="mb-3 line-clamp-2 text-card-desc text-text-secondary">
-          {post.excerpt}
+          {excerpt}
         </p>
         <div className="flex items-center gap-2 text-meta text-text-tertiary">
-          <span>이더</span>
+          <span>{locale === "en" ? "Ether" : "이더"}</span>
           <span className="h-0.5 w-0.5 flex-shrink-0 rounded-full bg-text-muted" />
-          <span>{new Date(post.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")}</span>
+          <span>{locale === "en"
+            ? new Date(post.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+            : new Date(post.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "")
+          }</span>
           <span className="h-0.5 w-0.5 flex-shrink-0 rounded-full bg-text-muted" />
           <span>{post.readingTime} min read</span>
           {post.tags.length > 0 && (

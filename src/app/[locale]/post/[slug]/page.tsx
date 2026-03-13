@@ -20,35 +20,37 @@ const getPost = cache(async (rawSlug: string) => {
 });
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }
 
 export const generateMetadata = async ({
   params,
 }: PageProps): Promise<Metadata> => {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const post = await getPost(slug);
 
   if (!post) return { title: "Not Found" };
 
+  const isEn = locale === "en" && !!post.titleEn;
+  const title = isEn ? post.titleEn! : post.title;
+  const description = isEn ? (post.excerptEn || post.excerpt) : post.excerpt;
+
   return {
-    title: post.title,
-    description: post.excerpt || undefined,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt || undefined,
-      type: "article",
-    },
+    title,
+    description: description || undefined,
+    openGraph: { title, description: description || undefined, type: "article" },
   };
 };
 
 const PostPage = async ({ params }: PageProps) => {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const post = await getPost(slug);
 
   if (!post || !post.published) notFound();
 
   const hasEnglish = !!post.contentEn;
+  const isEn = locale === "en";
+  const defaultLang = isEn && hasEnglish ? "en" : "ko";
   const headings = extractHeadings(post.content);
   const content = await renderMarkdown(post.content);
   const headingsEn = hasEnglish ? extractHeadings(post.contentEn!) : [];
@@ -112,7 +114,7 @@ const PostPage = async ({ params }: PageProps) => {
 
       <PostDetailHeader
         category={post.category as Category}
-        title={post.title}
+        title={defaultLang === "en" && post.titleEn ? post.titleEn : post.title}
         subtitle={post.subtitle || undefined}
         createdAt={post.createdAt.toISOString()}
         readingTime={post.readingTime}
@@ -120,6 +122,7 @@ const PostPage = async ({ params }: PageProps) => {
 
       {hasEnglish && contentEn ? (
         <LanguageToggle
+          defaultLang={defaultLang}
           contentKo={
             <>
               {content}
