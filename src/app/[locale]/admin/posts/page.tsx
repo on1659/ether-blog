@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { PostMeta } from "@/types";
 
 const CATEGORIES = ["commits", "articles", "techlab", "casual"] as const;
 
 const AdminPostsPage = () => {
+  const router = useRouter();
   const [posts, setPosts] = useState<PostMeta[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
@@ -15,10 +17,6 @@ const AdminPostsPage = () => {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [categoryModal, setCategoryModal] = useState<string[] | null>(null);
-  const [editModal, setEditModal] = useState<PostMeta | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editSubtitle, setEditSubtitle] = useState("");
-  const [editPublished, setEditPublished] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = useCallback(async () => {
@@ -97,30 +95,6 @@ const AdminPostsPage = () => {
       fetchPosts();
     } catch {
       alert("카테고리 변경에 실패했습니다.");
-    }
-  };
-
-  const handleEditSave = async () => {
-    if (!editModal) return;
-    try {
-      const res = await fetch(`/api/admin/posts/${editModal.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: editTitle,
-          subtitle: editSubtitle || null,
-          published: editPublished,
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        alert("실패: " + data.error);
-        return;
-      }
-      setEditModal(null);
-      fetchPosts();
-    } catch {
-      alert("수정에 실패했습니다.");
     }
   };
 
@@ -312,11 +286,8 @@ const AdminPostsPage = () => {
                       >
                         <button
                           onClick={() => {
-                            setEditTitle(post.title);
-                            setEditSubtitle(post.subtitle || "");
-                            setEditPublished(post.published);
-                            setEditModal(post);
                             setMenuOpen(null);
+                            router.push(`/admin/posts/${post.id}/edit`);
                           }}
                           className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary"
                         >
@@ -379,52 +350,6 @@ const AdminPostsPage = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setEditModal(null)}>
-          <div className="w-[440px] rounded-xl border border-border bg-bg-primary p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-4 text-lg font-bold text-text-primary">글 수정</h3>
-            <label className="mb-1.5 block text-meta font-medium text-text-tertiary">제목</label>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-border bg-bg-secondary px-4 py-2.5 text-sm text-text-primary outline-none focus:border-brand-primary"
-            />
-            <label className="mb-1.5 block text-meta font-medium text-text-tertiary">부제목</label>
-            <input
-              type="text"
-              value={editSubtitle}
-              onChange={(e) => setEditSubtitle(e.target.value)}
-              placeholder="선택 사항"
-              className="mb-3 w-full rounded-lg border border-border bg-bg-secondary px-4 py-2.5 text-sm text-text-primary outline-none focus:border-brand-primary"
-            />
-            <label className="mb-1.5 flex items-center gap-2 text-meta font-medium text-text-tertiary">
-              <input
-                type="checkbox"
-                checked={editPublished}
-                onChange={(e) => setEditPublished(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-border accent-brand-primary"
-              />
-              발행
-            </label>
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => setEditModal(null)}
-                className="flex-1 rounded-lg bg-bg-secondary py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleEditSave}
-                className="flex-1 rounded-lg bg-brand-primary py-2 text-sm font-semibold text-white transition-colors hover:opacity-90"
-              >
-                저장
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

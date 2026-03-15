@@ -23,7 +23,11 @@ export const POST = async (req: NextRequest) => {
 
   try {
     const body = await req.json();
-    const { title, content, category, tags = [], published = false } = body;
+    const {
+      title, subtitle, content, category,
+      tags = [], published = false,
+      titleEn, contentEn, slug: customSlug,
+    } = body;
 
     if (!title || !content || !category) {
       return NextResponse.json<ApiResponse>(
@@ -32,13 +36,29 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
-    const slug = await nextSlug();
+    const slug = customSlug || await nextSlug();
+
+    // 중복 slug 체크
+    if (customSlug) {
+      const existing = await prisma.post.findUnique({ where: { slug: customSlug } });
+      if (existing) {
+        return NextResponse.json<ApiResponse>(
+          { success: false, error: `slug "${customSlug}" already exists` },
+          { status: 400 }
+        );
+      }
+    }
+
     const readingTime = calculateReadingTime(content);
     const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+    const excerptEn = contentEn
+      ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200)
+      : undefined;
 
     const post = await prisma.post.create({
       data: {
         title,
+        subtitle: subtitle || undefined,
         content,
         excerpt,
         category,
@@ -47,6 +67,8 @@ export const POST = async (req: NextRequest) => {
         published,
         readingTime,
         coverImage: "",
+        ...(titleEn ? { titleEn } : {}),
+        ...(contentEn ? { contentEn, excerptEn } : {}),
       },
     });
 

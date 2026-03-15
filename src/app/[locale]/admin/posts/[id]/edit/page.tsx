@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Upload, Eye, EyeOff, Code, FileText, Globe } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { Upload, Eye, EyeOff, Code, FileText, Globe, ArrowLeft } from "lucide-react";
 
 const CATEGORIES = ["commits", "articles", "techlab", "casual"] as const;
 
@@ -35,12 +35,15 @@ const parseFrontmatter = (text: string): { frontmatter: Frontmatter; content: st
   return { frontmatter, content };
 };
 
-const NewPostPage = () => {
+const EditPostPage = () => {
   const router = useRouter();
+  const params = useParams();
+  const postId = params.id as string;
   const koFileRef = useRef<HTMLInputElement>(null);
   const enFileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -57,14 +60,44 @@ const NewPostPage = () => {
   const activeContent = activeLang === "ko" ? contentKo : contentEn;
   const setActiveContent = activeLang === "ko" ? setContentKo : setContentEn;
 
+  // Fetch existing post data
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const res = await fetch(`/api/admin/posts/${postId}`);
+        const data = await res.json();
+        if (data.success) {
+          const post = data.data;
+          setTitle(post.title || "");
+          setSubtitle(post.subtitle || "");
+          setSlug(post.slug || "");
+          setCategory(post.category || "articles");
+          setTags((post.tags || []).join(", "));
+          setContentKo(post.content || "");
+          setContentEn(post.contentEn || "");
+          setPublished(post.published ?? true);
+        } else {
+          alert("글을 불러올 수 없습니다.");
+          router.push("/admin/posts");
+        }
+      } catch {
+        alert("글을 불러올 수 없습니다.");
+        router.push("/admin/posts");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPost();
+  }, [postId, router]);
+
   const applyFrontmatter = useCallback(
     (fm: Frontmatter) => {
-      if (fm.title && !title) setTitle(fm.title);
+      if (fm.title) setTitle(fm.title);
       if (fm.subtitle) setSubtitle(fm.subtitle);
       if (fm.slug) setSlug(fm.slug);
-      if (fm.tags && !tags) setTags(fm.tags);
+      if (fm.tags) setTags(fm.tags);
     },
-    [title, tags]
+    []
   );
 
   const handleMdUpload = useCallback(
@@ -100,7 +133,6 @@ const NewPostPage = () => {
         const text = ev.target?.result as string;
         const { frontmatter, content } = parseFrontmatter(text);
         applyFrontmatter(frontmatter);
-        // Auto-detect language from filename (e.g., post-en.md)
         const isEn = /[-_.]en\.md$/i.test(file.name);
         if (isEn) {
           setContentEn(content);
@@ -152,16 +184,15 @@ const NewPostPage = () => {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/posts", {
-        method: "POST",
+      const res = await fetch(`/api/admin/posts/${postId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
-          subtitle: subtitle.trim() || undefined,
-          slug: slug.trim() || undefined,
+          subtitle: subtitle.trim() || null,
           content: contentKo,
-          contentEn: contentEn.trim() || undefined,
-          titleEn: contentEn.trim() ? title.trim() : undefined,
+          contentEn: contentEn.trim() || null,
+          titleEn: contentEn.trim() ? title.trim() : null,
           category,
           tags: tags
             .split(",")
@@ -183,11 +214,27 @@ const NewPostPage = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-[900px] py-20 text-center text-text-muted">
+        로딩 중...
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-[900px]">
       {/* Top bar */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-section-title">글 작성</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/admin/posts")}
+            className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-secondary hover:text-text-primary"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-section-title">글 수정</h1>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => koFileRef.current?.click()}
@@ -287,14 +334,13 @@ const NewPostPage = () => {
         </label>
       </div>
 
-      {/* Slug */}
+      {/* Slug (read-only for edit) */}
       <div className="mb-4">
         <input
           type="text"
           value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="slug (비우면 자동 생성)"
-          className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-meta text-text-primary outline-none placeholder:text-text-muted focus:border-brand-primary"
+          disabled
+          className="w-full rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-meta text-text-muted outline-none"
         />
       </div>
 
@@ -385,7 +431,7 @@ const NewPostPage = () => {
             disabled={saving}
             className="rounded-lg bg-brand-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "저장 중..." : published ? "발행하기" : "임시저장"}
+            {saving ? "저장 중..." : "수정 저장"}
           </button>
         </div>
       </div>
@@ -393,4 +439,4 @@ const NewPostPage = () => {
   );
 };
 
-export default NewPostPage;
+export default EditPostPage;
