@@ -2,8 +2,8 @@ name: Daily AI Post
 
 on:
   schedule:
-    # 매시 정각 실행 (UTC)
-    - cron: '0 * * * *'
+    # 30분마다 실행 (UTC)
+    - cron: '*/30 * * * *'
   workflow_dispatch: # 수동 실행 가능
 
 jobs:
@@ -12,18 +12,32 @@ jobs:
     steps:
       - name: Trigger Daily AI Post
         run: |
+          echo "🚀 Triggering Daily AI Post..."
+          echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
           response=$(curl -s -w "\n%{http_code}" -X POST \
             "https://radarlog.kr/api/v1/daily-ai/trigger" \
             -H "Authorization: Bearer ${{ secrets.BLOG_API_KEY }}" \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json" \
+            --max-time 120)
 
           http_code=$(echo "$response" | tail -1)
           body=$(echo "$response" | sed '$d')
 
-          echo "Status: $http_code"
-          echo "Response: $body"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "HTTP Status: $http_code"
+          echo "Response Body: $body"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Parse result
+          if echo "$body" | grep -q '"skipped":true'; then
+            reason=$(echo "$body" | grep -o '"reason":"[^"]*"' | head -1)
+            echo "⏭️ Skipped: $reason"
+          elif echo "$body" | grep -q '"postId"'; then
+            echo "✅ New post created!"
+          fi
 
           if [ "$http_code" -ge 400 ]; then
-            echo "::error::API call failed with status $http_code"
+            echo "::error::API call failed with status $http_code: $body"
             exit 1
           fi

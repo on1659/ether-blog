@@ -57,10 +57,10 @@ export const generateDailyAIPost = async (): Promise<{
   }
 
   // 뉴스 수집
-  const news = await fetchAINews(6);
+  const news = await fetchAINews(24);
 
   if (news.length === 0) {
-    return { postId: null, skipped: true, reason: "No AI news found in the last 6 hours" };
+    return { postId: null, skipped: true, reason: "No AI news found in the last 24 hours" };
   }
 
   // 이미 다룬 뉴스 URL 확인 (최근 24시간 daily 글의 content에서)
