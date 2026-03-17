@@ -52,6 +52,21 @@ export const PUT = async (req: NextRequest, { params }: RouteParams) => {
       body.excerptEn = body.contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200);
     }
 
+    // Bust thumbnail cache when category changes (dynamic thumbnails use category colors)
+    if (body.category) {
+      const existing = await prisma.post.findUnique({
+        where: { id },
+        select: { category: true, coverImage: true },
+      });
+      if (
+        existing &&
+        existing.category !== body.category &&
+        existing.coverImage?.startsWith("/api/thumbnail/")
+      ) {
+        body.coverImage = `/api/thumbnail/${id}?v=${Date.now()}`;
+      }
+    }
+
     const post = await prisma.post.update({
       where: { id },
       data: body,

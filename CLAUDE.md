@@ -172,7 +172,7 @@ radar-blog/
 DATABASE_URL=postgresql://...
 
 # NextAuth
-NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_URL=https://radarlog.kr
 NEXTAUTH_SECRET=your-secret
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=

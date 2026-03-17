@@ -17,6 +17,9 @@ const ENV_KEYS = [
   { key: "GOOGLE_AI_API_KEY", label: "Google AI API Key (Gemini)", group: "ai" },
   { key: "XAI_API_KEY", label: "xAI API Key (Grok)", group: "ai" },
   { key: "Z_AI_API_KEY", label: "z.ai API Key (GLM-4)", group: "ai" },
+  { key: "AI_BASE_URL", label: "Custom AI Base URL", group: "ai" },
+  { key: "AI_API_KEY", label: "Custom AI API Key", group: "ai" },
+  { key: "AI_MODEL", label: "Custom AI Model", group: "ai" },
   { key: "GITHUB_TOKEN", label: "GitHub Token", group: "github" },
   { key: "GITHUB_WEBHOOK_SECRET", label: "GitHub Webhook Secret", group: "github" },
   { key: "GITHUB_CLIENT_ID", label: "GitHub OAuth Client ID", group: "github" },
@@ -32,6 +35,7 @@ const AI_PROVIDERS = [
   { id: "google", label: "Gemini (Google)", envKey: "GOOGLE_AI_API_KEY" },
   { id: "xai", label: "Grok (xAI)", envKey: "XAI_API_KEY" },
   { id: "zai", label: "GLM-4 (z.ai)", envKey: "Z_AI_API_KEY" },
+  { id: "custom", label: "Custom (OpenAI-compatible)", envKey: "AI_API_KEY" },
 ] as const;
 
 export const GET = async () => {

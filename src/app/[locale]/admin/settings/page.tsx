@@ -94,6 +94,12 @@ const AI_MODELS: Record<string, { label: string; value: string }[]> = {
     { label: "GLM-4", value: "glm-4" },
     { label: "GLM-4 Plus", value: "glm-4-plus" },
   ],
+  custom: [
+    { label: "Claude Sonnet 4", value: "claude-sonnet-4-20250514" },
+    { label: "Claude Haiku 4.5", value: "claude-haiku-4-5-20251001" },
+    { label: "Claude Opus 4", value: "claude-opus-4-20250514" },
+    { label: "GPT-4o", value: "gpt-4o" },
+  ],
 };
 
 /* ───── Collapsible Section ───── */
@@ -676,7 +682,7 @@ const AdminSettingsPage = () => {
         <div className="mt-4 rounded-lg border border-border bg-bg-secondary p-4 text-card-desc text-text-secondary">
           <p className="mb-1 font-semibold text-text-primary">사용 방법</p>
           <code className="block whitespace-pre-wrap font-code text-[0.8rem] text-text-muted">
-            {`curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/posts \\
+            {`curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://radarlog.kr"}/api/v1/posts \\
   -H "Authorization: Bearer eb_xxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"title":"제목","content":"본문","category":"articles"}'`}
@@ -734,6 +740,17 @@ const AdminSettingsPage = () => {
               const selectedProvider = aiProviders.find(
                 (p) => p.id === (settings["ai_provider"] ?? "anthropic"),
               );
+              if (selectedProvider?.id === "custom") {
+                return (
+                  <div className="mt-2 rounded-lg border border-brand-primary/20 bg-[rgba(49,130,246,0.05)] p-3 text-meta text-text-secondary">
+                    <p className="font-medium text-brand-primary">OpenAI-compatible Proxy (OpenClaw, OhMyCode 등)</p>
+                    <p className="mt-1">Railway 환경변수에 <code className="rounded bg-bg-secondary px-1">AI_BASE_URL</code>과 <code className="rounded bg-bg-secondary px-1">AI_API_KEY</code>를 설정하세요.</p>
+                    {!selectedProvider.connected && (
+                      <p className="mt-1 text-cat-casual">AI_API_KEY가 설정되지 않았습니다.</p>
+                    )}
+                  </div>
+                );
+              }
               if (selectedProvider && !selectedProvider.connected) {
                 return (
                   <p className="mt-2 text-meta text-cat-casual">

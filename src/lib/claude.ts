@@ -1,10 +1,50 @@
 import OpenAI from "openai";
+import { prisma } from "@/lib/prisma";
 
-const getClient = () =>
-  new OpenAI({
-    apiKey: process.env.Z_AI_API_KEY || "dummy",
-    baseURL: "https://api.z.ai/api/coding/paas/v4",
+/* ───── Provider Configs ───── */
+
+const PROVIDER_CONFIGS: Record<string, { baseURL: string; envKey: string; defaultModel: string }> = {
+  anthropic: { baseURL: "https://api.anthropic.com/v1", envKey: "ANTHROPIC_API_KEY", defaultModel: "claude-sonnet-4-20250514" },
+  openai:    { baseURL: "https://api.openai.com/v1", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" },
+  google:    { baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", envKey: "GOOGLE_AI_API_KEY", defaultModel: "gemini-2.5-flash" },
+  xai:       { baseURL: "https://api.x.ai/v1", envKey: "XAI_API_KEY", defaultModel: "grok-3" },
+  zai:       { baseURL: "https://api.z.ai/api/coding/paas/v4", envKey: "Z_AI_API_KEY", defaultModel: "glm-5" },
+  custom:    { baseURL: "", envKey: "AI_API_KEY", defaultModel: "claude-sonnet-4-20250514" },
+};
+
+const getAIConfig = async (): Promise<{ baseURL: string; apiKey: string; model: string }> => {
+  // Fast path: generic env vars override everything
+  if (process.env.AI_BASE_URL && process.env.AI_API_KEY) {
+    return {
+      baseURL: process.env.AI_BASE_URL,
+      apiKey: process.env.AI_API_KEY,
+      model: process.env.AI_MODEL ?? "claude-sonnet-4-20250514",
+    };
+  }
+
+  // Read DB settings for provider/model selection
+  const settings = await prisma.setting.findMany({
+    where: { key: { in: ["ai_provider", "ai_model"] } },
   });
+  const settingsMap = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+  const provider = settingsMap["ai_provider"] ?? "zai";
+  const config = PROVIDER_CONFIGS[provider] ?? PROVIDER_CONFIGS["zai"];
+
+  const apiKey = process.env.AI_API_KEY ?? process.env[config.envKey] ?? "";
+  if (!apiKey) {
+    throw new Error(
+      `AI API key not configured. Set AI_API_KEY or ${config.envKey} environment variable.`
+    );
+  }
+
+  return {
+    baseURL: process.env.AI_BASE_URL ?? config.baseURL,
+    apiKey,
+    model: process.env.AI_MODEL ?? settingsMap["ai_model"] ?? config.defaultModel,
+  };
+};
+
+/* ───── System Prompts ───── */
 
 const SYSTEM_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그 글 작성자입니다.
 커밋 정보를 바탕으로 기술 블로그 글을 작성합니다.
@@ -92,6 +132,8 @@ const BRIEF_SYSTEM_PROMPT = `당신은 "이더"라는 개발자의 기술 블로
   "tags": ["태그1", "태그2"]
 }`;
 
+/* ───── Generate ───── */
+
 interface GenerateOptions {
   commitMessage: string;
   diff: string;
@@ -110,6 +152,9 @@ export const generateBlogContent = async ({
   locale = "ko",
   brief = false,
 }: GenerateOptions): Promise<{ title: string; content: string; titleEn?: string; contentEn?: string; tags: string[] }> => {
+  const { baseURL, apiKey, model } = await getAIConfig();
+  const client = new OpenAI({ apiKey, baseURL });
+
   const filesSummary = filesChanged
     .map(
       (f) =>
@@ -130,8 +175,8 @@ export const generateBlogContent = async ({
     systemPrompt += "\n\n## Language\n\nWrite in English. Natural, conversational tone.";
   }
 
-  const response = await getClient().chat.completions.create({
-    model: "glm-5",
+  const response = await client.chat.completions.create({
+    model,
     max_tokens: brief ? 2000 : 8000,
     messages: [
       { role: "system", content: systemPrompt },

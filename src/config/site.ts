@@ -1,7 +1,7 @@
 export const siteConfig = {
   title: "이더.dev",
   description: "코드를 쓰면, 글이 된다. GitHub 커밋 기반 AI 자동 기술 블로그.",
-  url: "https://radar-blog.up.railway.app",
+  url: "https://radarlog.kr",
   author: {
     name: "이더",
     nameEn: "Radar",

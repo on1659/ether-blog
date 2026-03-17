@@ -67,7 +67,7 @@ const DocsPage = () => (
           <Globe size={14} /> Base URL
         </div>
         <code className="text-[0.9375rem] font-medium text-brand-primary">
-          https://radar-blog.up.railway.app
+          https://radarlog.kr
         </code>
       </div>
 
@@ -304,7 +304,7 @@ const DocsPage = () => (
             Terminal
           </div>
           <pre className="overflow-x-auto bg-[#191A1C] p-4 text-[0.875rem] leading-[1.7] text-[#ECECEC]">
-            <code>{`curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
+            <code>{`curl -X POST https://radarlog.kr/api/v1/posts \\
   -H "Authorization: Bearer sk-abc123..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -335,7 +335,7 @@ const DocsPage = () => (
             <div className="space-y-1">
               <p><span className="text-[#8B5CF6]">1.</span> <code>/admin/settings</code>에서 GitHub 레포 등록</p>
               <p><span className="text-[#8B5CF6]">2.</span> GitHub 레포 → Settings → Webhooks → Add webhook</p>
-              <p><span className="text-[#8B5CF6]">3.</span> Payload URL: <code className="text-[#60A5FA]">https://radar-blog.up.railway.app/api/webhooks/github</code></p>
+              <p><span className="text-[#8B5CF6]">3.</span> Payload URL: <code className="text-[#60A5FA]">https://radarlog.kr/api/webhooks/github</code></p>
               <p><span className="text-[#8B5CF6]">4.</span> Content type: <code>application/json</code></p>
               <p><span className="text-[#8B5CF6]">5.</span> Secret: <code>GITHUB_WEBHOOK_SECRET</code> 값과 동일하게</p>
               <p><span className="text-[#8B5CF6]">6.</span> Events: <code>Just the push event</code></p>

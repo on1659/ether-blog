@@ -89,7 +89,7 @@ Content-Type: application/json
 ### 한국어만
 
 \`\`\`bash
-curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
+curl -X POST https://radarlog.kr/api/v1/posts \\
   -H "Authorization: Bearer sk-abc123..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -104,7 +104,7 @@ curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
 ### 한국어 + 영어
 
 \`\`\`bash
-curl -X POST https://radar-blog.up.railway.app/api/v1/posts \\
+curl -X POST https://radarlog.kr/api/v1/posts \\
   -H "Authorization: Bearer sk-abc123..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -165,7 +165,7 @@ API를 직접 호출하지 않아도, GitHub 레포에 push하면 자동으로 �
 \`\`\`
 1. /admin/settings에서 GitHub 레포 등록
 2. GitHub 레포 → Settings → Webhooks → Add webhook
-3. Payload URL: https://radar-blog.up.railway.app/api/webhooks/github
+3. Payload URL: https://radarlog.kr/api/webhooks/github
 4. Content type: application/json
 5. Secret: GITHUB_WEBHOOK_SECRET 값과 동일하게
 6. Events: Just the push event
