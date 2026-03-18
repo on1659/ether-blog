@@ -61,6 +61,12 @@
     "categories": "Categories",
     "copyright": "© 2026 Radar. Powered by Next.js + Railway"
   },
+  "notFound": {
+    "title": "404",
+    "message": "Page not found",
+    "submessage": "Even EtherBot seems to be lost...",
+    "button": "Go back home"
+  },
   "common": {
     "readMore": "Read More",
     "goBack": "Go Back"

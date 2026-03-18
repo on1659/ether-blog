@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FooterMascot } from "../mascot/FooterMascot";
 
 interface FooterDict {
   links: string;
@@ -11,7 +12,8 @@ export const Footer = ({ dict }: { dict: FooterDict }) => {
     <footer className="border-t border-border py-10 px-5 sm:px-8">
       <div className="mx-auto flex max-w-container flex-col justify-between gap-8 sm:flex-row sm:items-start">
         <div>
-          <div className="mb-2 text-base font-[800]">
+          <div className="mb-2 flex items-center text-base font-[800]">
+            <FooterMascot />
             이더<span className="text-brand-primary">.</span>dev
           </div>
           <div className="text-meta text-text-muted">{dict.copyright}</div>

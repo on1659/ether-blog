@@ -1,3 +1,5 @@
+import { HeroMascot } from "../mascot/HeroMascot";
+
 interface HeroDict {
   title: string;
   subtitle: string;
@@ -33,6 +35,7 @@ export const HeroBanner = ({ dict }: { dict: HeroDict }) => {
           {dict.description}
         </p>
       </div>
+      <HeroMascot />
     </section>
   );
 };
