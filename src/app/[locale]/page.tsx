@@ -121,12 +121,21 @@ const Home = async ({
         <h2 className="text-[1.375rem] font-bold tracking-[-0.02em]">
           {dict.home.recentPosts}
         </h2>
-        <Link
-          href={`${prefix}/articles`}
-          className="text-sm font-medium text-text-tertiary transition-colors duration-base hover:text-brand-primary"
-        >
-          {dict.home.viewAll} →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`${prefix}/search`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-all duration-base hover:bg-bg-secondary hover:text-brand-primary"
+            aria-label="검색"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </Link>
+          <Link
+            href={`${prefix}/articles`}
+            className="text-sm font-medium text-text-tertiary transition-colors duration-base hover:text-brand-primary"
+          >
+            {dict.home.viewAll} →
+          </Link>
+        </div>
       </div>
 
       <Suspense>
