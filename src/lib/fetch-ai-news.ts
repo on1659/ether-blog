@@ -1,37 +1,41 @@
 import Parser from "rss-parser";
+import {
+  type RawSignalItem,
+  type SourceType,
+  matchesKeyword,
+  REDDIT_SUBS,
+  RSS_FEEDS,
+  MAX_ITEMS_PER_SOURCE,
+  SLOT_CONFIG,
+  TOTAL_SLOTS,
+} from "./signal-sources";
+import { makeExternalId, extractCanonicalUrl } from "./normalize-url";
 
-export interface NewsItem {
-  title: string;
-  url: string;
-  source: string;
-  score: number;
-  createdAt: string;
-  summary?: string;
-}
+/* ───── 동시성 제한 유틸 ───── */
 
-/* ───── 설정 ───── */
-
-const AI_KEYWORDS = (process.env.AI_KEYWORDS ?? "AI,LLM,GPT,Claude,Anthropic,OpenAI,Gemini,agent,RAG,transformer,fine-tuning")
-  .split(",")
-  .map((k) => k.trim().toLowerCase());
-
-const MAX_ITEMS = Number(process.env.MAX_NEWS_ITEMS ?? "10");
-
-const REDDIT_SUBS = (process.env.REDDIT_SUBS ?? "MachineLearning,LocalLLaMA,artificial").split(",");
-
-const DEFAULT_RSS_FEEDS = [
-  { name: "TLDR AI", url: "https://tldr.tech/ai/rss" },
-  { name: "MIT Tech Review AI", url: "https://www.technologyreview.com/topic/artificial-intelligence/feed" },
-];
-
-const matchesKeyword = (text: string): boolean => {
-  const lower = text.toLowerCase();
-  return AI_KEYWORDS.some((kw) => lower.includes(kw));
+const pLimit = (concurrency: number) => {
+  let active = 0;
+  const queue: (() => void)[] = [];
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise((resolve, reject) => {
+      const run = async () => {
+        active++;
+        try { resolve(await fn()); }
+        catch (e) { reject(e); }
+        finally {
+          active--;
+          if (queue.length > 0) queue.shift()!();
+        }
+      };
+      if (active < concurrency) run();
+      else queue.push(run);
+    });
 };
 
 /* ───── 1. Hacker News (Firebase API) ───── */
 
-const fetchHackerNews = async (): Promise<NewsItem[]> => {
+const fetchHackerNews = async (): Promise<RawSignalItem[]> => {
+  const limit = pLimit(10);
   try {
     const [topRes, bestRes] = await Promise.all([
       fetch("https://hacker-news.firebaseio.com/v0/topstories.json"),
@@ -40,27 +44,34 @@ const fetchHackerNews = async (): Promise<NewsItem[]> => {
 
     const topIds: number[] = await topRes.json();
     const bestIds: number[] = await bestRes.json();
-
     const uniqueIds = [...new Set([...topIds.slice(0, 30), ...bestIds.slice(0, 30)])];
 
     const items = await Promise.all(
-      uniqueIds.map(async (id) => {
-        const res = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-        return res.json();
-      })
+      uniqueIds.map((id) =>
+        limit(async () => {
+          const res = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+          return res.json();
+        })
+      )
     );
 
     return items
       .filter((item) => item && !item.dead && !item.deleted && item.title && matchesKeyword(item.title))
-      .map((item) => ({
-        title: item.title,
-        url: item.url || `https://news.ycombinator.com/item?id=${item.id}`,
-        source: "Hacker News",
-        score: item.score ?? 0,
-        createdAt: new Date((item.time ?? 0) * 1000).toISOString(),
-      }))
+      .map((item) => {
+        const url = item.url || `https://news.ycombinator.com/item?id=${item.id}`;
+        return {
+          externalId: makeExternalId("hacker-news", url),
+          canonicalUrl: extractCanonicalUrl(url, "Hacker News"),
+          source: "Hacker News",
+          sourceType: "community" as SourceType,
+          title: item.title,
+          url,
+          score: item.score ?? 0,
+          createdAt: new Date((item.time ?? 0) * 1000).toISOString(),
+        };
+      })
       .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_ITEMS);
+      .slice(0, MAX_ITEMS_PER_SOURCE);
   } catch (e) {
     console.error("HackerNews fetch failed:", e);
     return [];
@@ -69,8 +80,8 @@ const fetchHackerNews = async (): Promise<NewsItem[]> => {
 
 /* ───── 2. Reddit (공개 JSON API) ───── */
 
-const fetchReddit = async (): Promise<NewsItem[]> => {
-  const results: NewsItem[] = [];
+const fetchReddit = async (): Promise<RawSignalItem[]> => {
+  const results: RawSignalItem[] = [];
 
   for (const sub of REDDIT_SUBS) {
     try {
@@ -86,12 +97,17 @@ const fetchReddit = async (): Promise<NewsItem[]> => {
       for (const { data: post } of posts) {
         if (post.stickied || post.score <= 10) continue;
 
+        const url = post.url?.startsWith("https://www.reddit.com")
+          ? `https://www.reddit.com${post.permalink}`
+          : post.url || `https://www.reddit.com${post.permalink}`;
+
         results.push({
-          title: post.title,
-          url: post.url?.startsWith("https://www.reddit.com")
-            ? `https://www.reddit.com${post.permalink}`
-            : post.url || `https://www.reddit.com${post.permalink}`,
+          externalId: makeExternalId(`reddit-${sub}`, url),
+          canonicalUrl: extractCanonicalUrl(url, `Reddit r/${sub}`),
           source: `Reddit r/${sub}`,
+          sourceType: "community",
+          title: post.title,
+          url,
           score: post.score,
           createdAt: new Date(post.created_utc * 1000).toISOString(),
           summary: post.selftext?.slice(0, 300) || undefined,
@@ -102,12 +118,12 @@ const fetchReddit = async (): Promise<NewsItem[]> => {
     }
   }
 
-  return results.sort((a, b) => b.score - a.score).slice(0, MAX_ITEMS);
+  return results.sort((a, b) => b.score - a.score).slice(0, MAX_ITEMS_PER_SOURCE);
 };
 
 /* ───── 3. HuggingFace Daily Papers ───── */
 
-const fetchHuggingFacePapers = async (): Promise<NewsItem[]> => {
+const fetchHuggingFacePapers = async (): Promise<RawSignalItem[]> => {
   try {
     const res = await fetch("https://huggingface.co/api/daily_papers");
     if (!res.ok) return [];
@@ -120,15 +136,21 @@ const fetchHuggingFacePapers = async (): Promise<NewsItem[]> => {
     }> = await res.json();
 
     return papers
-      .slice(0, MAX_ITEMS)
-      .map((p) => ({
-        title: p.paper?.title ?? p.title,
-        url: `https://huggingface.co/papers/${p.paper?.id}`,
-        source: "HuggingFace Papers",
-        score: p.upvotes ?? 0,
-        createdAt: p.publishedAt ?? new Date().toISOString(),
-        summary: p.paper?.summary?.slice(0, 500) || undefined,
-      }));
+      .slice(0, MAX_ITEMS_PER_SOURCE)
+      .map((p) => {
+        const url = `https://huggingface.co/papers/${p.paper?.id}`;
+        return {
+          externalId: makeExternalId("huggingface", url),
+          canonicalUrl: extractCanonicalUrl(url, "HuggingFace Papers"),
+          source: "HuggingFace Papers",
+          sourceType: "research" as SourceType,
+          title: p.paper?.title ?? p.title,
+          url,
+          score: p.upvotes ?? 0,
+          createdAt: p.publishedAt ?? new Date().toISOString(),
+          summary: p.paper?.summary?.slice(0, 500) || undefined,
+        };
+      });
   } catch (e) {
     console.error("HuggingFace Papers fetch failed:", e);
     return [];
@@ -137,7 +159,7 @@ const fetchHuggingFacePapers = async (): Promise<NewsItem[]> => {
 
 /* ───── 4. GitHub Trending ───── */
 
-const fetchGitHubTrending = async (): Promise<NewsItem[]> => {
+const fetchGitHubTrending = async (): Promise<RawSignalItem[]> => {
   try {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const query = encodeURIComponent(`topic:ai topic:machine-learning topic:llm created:>${weekAgo}`);
@@ -148,7 +170,7 @@ const fetchGitHubTrending = async (): Promise<NewsItem[]> => {
     }
 
     const res = await fetch(
-      `https://api.github.com/search/repositories?q=${query}&sort=stars&order=desc&per_page=${MAX_ITEMS}`,
+      `https://api.github.com/search/repositories?q=${query}&sort=stars&order=desc&per_page=${MAX_ITEMS_PER_SOURCE}`,
       { headers }
     );
 
@@ -164,15 +186,20 @@ const fetchGitHubTrending = async (): Promise<NewsItem[]> => {
       stargazers_count: number;
       created_at: string;
       topics?: string[];
-      language?: string;
-    }) => ({
-      title: `${repo.full_name} — ${repo.description ?? ""}`.slice(0, 200),
-      url: repo.html_url,
-      source: "GitHub Trending",
-      score: repo.stargazers_count,
-      createdAt: repo.created_at,
-      summary: repo.topics?.slice(0, 5).join(", ") || undefined,
-    }));
+    }) => {
+      const url = repo.html_url;
+      return {
+        externalId: makeExternalId("github", url),
+        canonicalUrl: extractCanonicalUrl(url, "GitHub Trending"),
+        source: "GitHub Trending",
+        sourceType: "research" as SourceType,
+        title: `${repo.full_name} — ${repo.description ?? ""}`.slice(0, 200),
+        url,
+        score: repo.stargazers_count,
+        createdAt: repo.created_at,
+        summary: repo.topics?.slice(0, 5).join(", ") || undefined,
+      };
+    });
   } catch (e) {
     console.error("GitHub Trending fetch failed:", e);
     return [];
@@ -181,9 +208,8 @@ const fetchGitHubTrending = async (): Promise<NewsItem[]> => {
 
 /* ───── 5. RSS Feeds ───── */
 
-const fetchRSSFeeds = async (): Promise<NewsItem[]> => {
+const fetchRSSFeeds = async (): Promise<RawSignalItem[]> => {
   const parser = new Parser({ timeout: 10000 });
-  const results: NewsItem[] = [];
 
   let customFeeds: { name: string; url: string }[] = [];
   try {
@@ -194,33 +220,108 @@ const fetchRSSFeeds = async (): Promise<NewsItem[]> => {
     console.error("Failed to parse CUSTOM_RSS env var");
   }
 
-  const allFeeds = [...DEFAULT_RSS_FEEDS, ...customFeeds];
+  const allFeeds = [...RSS_FEEDS, ...customFeeds];
 
-  for (const feed of allFeeds) {
-    try {
+  // 병렬 수집 (Promise.allSettled로 실패 격리)
+  const feedResults = await Promise.allSettled(
+    allFeeds.map(async (feed) => {
       const parsed = await parser.parseURL(feed.url);
+      return { feed, items: parsed.items ?? [] };
+    })
+  );
 
-      for (const item of (parsed.items ?? []).slice(0, 5)) {
-        results.push({
-          title: item.title ?? "Untitled",
-          url: item.link ?? "",
-          source: `RSS: ${feed.name}`,
-          score: 0,
-          createdAt: item.isoDate ?? item.pubDate ?? new Date().toISOString(),
-          summary: item.contentSnippet?.slice(0, 500) || undefined,
-        });
-      }
-    } catch (e) {
-      console.error(`RSS ${feed.name} fetch failed:`, e);
+  const results: RawSignalItem[] = [];
+
+  for (const result of feedResults) {
+    if (result.status === "rejected") {
+      console.error("RSS feed fetch failed:", result.reason);
+      continue;
+    }
+
+    const { feed, items } = result.value;
+
+    for (const item of items.slice(0, 5)) {
+      // pubDate 없으면 건너뜀 (fallback으로 현재시각 사용 금지)
+      const pubDate = item.isoDate ?? item.pubDate;
+      if (!pubDate) continue;
+
+      const url = item.link ?? "";
+      if (!url) continue;
+
+      results.push({
+        externalId: makeExternalId(`rss-${feed.name}`, url),
+        canonicalUrl: extractCanonicalUrl(url, `RSS: ${feed.name}`),
+        source: `RSS: ${feed.name}`,
+        sourceType: "industry",
+        title: item.title ?? "Untitled",
+        url,
+        score: 0,
+        createdAt: pubDate,
+        summary: item.contentSnippet?.slice(0, 500) || undefined,
+      });
     }
   }
 
-  return results.slice(0, MAX_ITEMS);
+  return results;
+};
+
+/* ───── 슬롯제 선별 ───── */
+
+const selectBySlots = (items: RawSignalItem[]): RawSignalItem[] => {
+  const byType: Record<SourceType, RawSignalItem[]> = {
+    community: [],
+    research: [],
+    industry: [],
+  };
+
+  for (const item of items) {
+    byType[item.sourceType]?.push(item);
+  }
+
+  // community/research: score 내림차순, industry: 발행시각 최신순
+  byType.community.sort((a, b) => b.score - a.score);
+  byType.research.sort((a, b) => b.score - a.score);
+  byType.industry.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const selected: RawSignalItem[] = [];
+  const remaining: RawSignalItem[] = [];
+
+  for (const type of ["community", "research", "industry"] as SourceType[]) {
+    const slot = SLOT_CONFIG[type];
+    const pool = byType[type];
+    selected.push(...pool.slice(0, slot));
+    remaining.push(...pool.slice(slot));
+  }
+
+  // 슬롯 부족 시 다른 유형에서 채우기
+  if (selected.length < TOTAL_SLOTS) {
+    remaining.sort((a, b) => b.score - a.score);
+    const needed = TOTAL_SLOTS - selected.length;
+    selected.push(...remaining.slice(0, needed));
+  }
+
+  return selected;
+};
+
+/* ───── canonicalUrl 기반 dedup ───── */
+
+const dedup = (items: RawSignalItem[]): RawSignalItem[] => {
+  const seen = new Map<string, RawSignalItem>();
+
+  for (const item of items) {
+    const key = item.canonicalUrl ?? item.externalId;
+    const existing = seen.get(key);
+    if (!existing || item.score > existing.score) {
+      seen.set(key, item);
+    }
+  }
+
+  return [...seen.values()];
 };
 
 /* ───── 메인: 전체 소스 병렬 수집 ───── */
 
-export const fetchAINews = async (): Promise<NewsItem[]> => {
+export const fetchAINews = async (): Promise<RawSignalItem[]> => {
   const [hn, reddit, hf, github, rss] = await Promise.all([
     fetchHackerNews(),
     fetchReddit(),
@@ -235,6 +336,18 @@ export const fetchAINews = async (): Promise<NewsItem[]> => {
     `[AI News] Collected: HN=${hn.length}, Reddit=${reddit.length}, HF=${hf.length}, GitHub=${github.length}, RSS=${rss.length}, Total=${all.length}`
   );
 
-  // 점수 기반 정렬 (RSS는 score=0이라 뒤로 감)
-  return all.sort((a, b) => b.score - a.score);
+  // canonicalUrl 기반 cross-source dedup
+  const deduped = dedup(all);
+  console.log(`[AI News] After dedup: ${deduped.length} (removed ${all.length - deduped.length} duplicates)`);
+
+  // 슬롯제 선별
+  const selected = selectBySlots(deduped);
+  console.log(
+    `[AI News] Selected ${selected.length} items: ` +
+    `community=${selected.filter((i) => i.sourceType === "community").length}, ` +
+    `research=${selected.filter((i) => i.sourceType === "research").length}, ` +
+    `industry=${selected.filter((i) => i.sourceType === "industry").length}`
+  );
+
+  return selected;
 };

@@ -121,6 +121,25 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+model SignalItem {
+  id           String   @id @default(cuid())
+  externalId   String   @unique
+  canonicalUrl String?
+  source       String
+  sourceType   String   // "community" | "research" | "industry"
+  title        String
+  url          String
+  score        Int      @default(0)
+  summary      String?
+  fetchedAt    DateTime @default(now())
+  usedInPost   String?
+
+  @@index([fetchedAt])
+  @@index([source])
+  @@index([sourceType])
+  @@index([usedInPost])
+}
+
 enum Category {
   commits
   articles

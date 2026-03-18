@@ -96,8 +96,7 @@ export const processCommits = async (
         brief: true,
       });
 
-      const postCount = await prisma.post.count();
-      const slug = String(postCount + 1);
+      const slug = `commits-${crypto.randomUUID().slice(0, 12)}`;
 
       const readingTime = calculateReadingTime(content);
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);

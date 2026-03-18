@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { calculateReadingTime } from "./markdown";
 import { fetchAINews } from "./fetch-ai-news";
 import { getAIConfig } from "./claude";
+import { type RawSignalItem, SLOT_CONFIG, TOTAL_SLOTS } from "./signal-sources";
 
 const DAILY_AI_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그에서 AI 뉴스 다이제스트를 작성하는 역할입니다.
 다양한 소스(Hacker News, Reddit, HuggingFace Papers, GitHub Trending, RSS)에서 수집된 AI 관련 뉴스를 바탕으로 하나의 블로그 글을 작성합니다.
@@ -19,6 +20,7 @@ const DAILY_AI_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그�
 - 제목은 "AI 업데이트: {핵심 키워드}" 형식
 - 본문은 ## 섹션으로 구분 (예: 🔥 핫 토픽, 📰 뉴스, 📄 논문, ⭐ 오픈소스 등)
 - 섹션마다 뉴스 제목 + 원문 링크 + 2~3문장 해설
+- 각 항목 말미에 **출처:** [소스명](원문URL) 형태로 출처를 반드시 명시
 - 소스가 다양하면 섹션을 소스 유형별로 묶어도 좋다
 - 마지막에 > 인용구로 오늘의 한줄 정리
 - 전체 2000~4000자
@@ -47,7 +49,7 @@ export const generateDailyAIPost = async (): Promise<{
   skipped: boolean;
   reason?: string;
 }> => {
-  // 1시간 내 이미 생성된 daily 글이 있으면 스킵
+  // 1시간 내 이미 생성된 signal 글이 있으면 스킵
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const recentCount = await prisma.post.count({
     where: { category: "signal", createdAt: { gte: oneHourAgo } },
@@ -57,42 +59,38 @@ export const generateDailyAIPost = async (): Promise<{
     return { postId: null, skipped: true, reason: `Hourly cap reached (${recentCount}/${HOURLY_CAP})` };
   }
 
-  // 5개 소스에서 병렬 수집
+  // 소스 수집 + dedup + 슬롯제 선별
   const news = await fetchAINews();
 
   if (news.length === 0) {
     return { postId: null, skipped: true, reason: "No AI news found from any source" };
   }
 
-  // 이미 다룬 뉴스 URL 확인 (최근 24시간 daily 글의 content에서)
-  const recentDailyPosts = await prisma.post.findMany({
+  // SignalItem 테이블에 upsert (externalId 기반 중복 차단)
+  await upsertSignalItems(news);
+
+  // 미사용 아이템만 조회 (48h 이내, usedInPost=null)
+  const freshItems = await prisma.signalItem.findMany({
     where: {
-      category: "signal",
-      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      usedInPost: null,
+      fetchedAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
     },
-    select: { content: true },
+    orderBy: { score: "desc" },
+    take: 30,
   });
 
-  const coveredUrls = new Set<string>();
-  for (const post of recentDailyPosts) {
-    const urlMatches = post.content.match(/https?:\/\/[^\s)]+/g);
-    if (urlMatches) urlMatches.forEach((u) => coveredUrls.add(u));
+  if (freshItems.length < 2) {
+    return { postId: null, skipped: true, reason: `Only ${freshItems.length} fresh items (need at least 2)` };
   }
 
-  const freshNews = news.filter((n) => !coveredUrls.has(n.url));
+  // 슬롯제 재적용 (DB에서 가져온 fresh items 기준)
+  const topItems = selectFreshBySlots(freshItems);
 
-  if (freshNews.length < 2) {
-    return { postId: null, skipped: true, reason: `Only ${freshNews.length} fresh news items (need at least 2)` };
-  }
-
-  // 상위 15개만 AI에게 전달 (토큰 절약)
-  const topNews = freshNews.slice(0, 15);
-
-  // AI로 글 생성 (공유 설정 사용)
+  // AI로 글 생성
   const { baseURL, apiKey, model } = await getAIConfig();
   const client = new OpenAI({ apiKey, baseURL });
 
-  const newsContext = topNews
+  const newsContext = topItems
     .map((n, i) => `${i + 1}. [${n.source}] ${n.title}\n   URL: ${n.url}\n   Score: ${n.score}${n.summary ? `\n   Summary: ${n.summary.slice(0, 200)}` : ""}`)
     .join("\n\n");
 
@@ -103,7 +101,7 @@ export const generateDailyAIPost = async (): Promise<{
       { role: "system", content: DAILY_AI_PROMPT },
       {
         role: "user",
-        content: `오늘 수집된 AI 관련 뉴스입니다 (${topNews.length}건, 5개 소스). 이를 바탕으로 Daily AI 업데이트 글을 작성해주세요.\n\n${newsContext}\n\nJSON으로 응답해.`,
+        content: `오늘 수집된 AI 관련 뉴스입니다 (${topItems.length}건, 다양한 소스). 이를 바탕으로 Daily AI 업데이트 글을 작성해주세요.\n\n${newsContext}\n\nJSON으로 응답해.`,
       },
     ],
   });
@@ -124,9 +122,8 @@ export const generateDailyAIPost = async (): Promise<{
   const content = tokenBadge + parsed.content;
   const contentEn = parsed.contentEn ? tokenBadge + parsed.contentEn : null;
 
-  // DB 저장
-  const postCount = await prisma.post.count();
-  const slug = String(postCount + 1);
+  // DB 저장 (slug = cuid 기반, 경합 불가)
+  const slug = `signal-${crypto.randomUUID().slice(0, 12)}`;
   const readingTime = calculateReadingTime(content);
   const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
   const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;
@@ -153,6 +150,12 @@ export const generateDailyAIPost = async (): Promise<{
     data: { coverImage: `/api/thumbnail/${post.id}` },
   });
 
+  // 사용된 SignalItem에 postId 기록
+  await prisma.signalItem.updateMany({
+    where: { id: { in: topItems.map((i) => i.id) } },
+    data: { usedInPost: post.id },
+  });
+
   // ISR 캐시 갱신
   try {
     revalidatePath("/");
@@ -161,11 +164,76 @@ export const generateDailyAIPost = async (): Promise<{
     console.error("Revalidation failed");
   }
 
-  const sourceSummary = [
-    ...new Set(topNews.map((n) => n.source.split(" ")[0])),
-  ].join(", ");
-
-  console.log(`Generated daily AI post: ${post.id} (${freshNews.length} news, sources: ${sourceSummary})`);
+  const sourceSummary = [...new Set(topItems.map((n) => n.source.split(" ")[0]))].join(", ");
+  console.log(`Generated daily AI post: ${post.id} (${topItems.length} items, sources: ${sourceSummary})`);
 
   return { postId: post.id, skipped: false };
+};
+
+/* ───── SignalItem upsert ───── */
+
+const upsertSignalItems = async (items: RawSignalItem[]) => {
+  for (const item of items) {
+    try {
+      await prisma.signalItem.upsert({
+        where: { externalId: item.externalId },
+        create: {
+          externalId: item.externalId,
+          canonicalUrl: item.canonicalUrl,
+          source: item.source,
+          sourceType: item.sourceType,
+          title: item.title,
+          url: item.url,
+          score: item.score,
+          summary: item.summary,
+          fetchedAt: new Date(),
+        },
+        update: {
+          score: item.score,
+        },
+      });
+    } catch (e) {
+      // unique constraint 충돌 등 개별 실패는 무시
+      console.error(`SignalItem upsert failed for ${item.externalId}:`, e);
+    }
+  }
+};
+
+/* ───── DB fresh items → 슬롯제 선별 ───── */
+
+interface SignalItemRow {
+  id: string;
+  source: string;
+  sourceType: string;
+  title: string;
+  url: string;
+  score: number;
+  summary: string | null;
+}
+
+const selectFreshBySlots = (items: SignalItemRow[]): SignalItemRow[] => {
+  const slots = SLOT_CONFIG;
+  const byType: Record<string, SignalItemRow[]> = { community: [], research: [], industry: [] };
+
+  for (const item of items) {
+    byType[item.sourceType]?.push(item);
+  }
+
+  const selected: SignalItemRow[] = [];
+  const remaining: SignalItemRow[] = [];
+
+  for (const type of ["community", "research", "industry"] as const) {
+    const slot = slots[type];
+    const pool = byType[type] ?? [];
+    selected.push(...pool.slice(0, slot));
+    remaining.push(...pool.slice(slot));
+  }
+
+  // 부족분 채우기
+  if (selected.length < TOTAL_SLOTS) {
+    remaining.sort((a, b) => b.score - a.score);
+    selected.push(...remaining.slice(0, TOTAL_SLOTS - selected.length));
+  }
+
+  return selected;
 };
