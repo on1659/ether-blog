@@ -49,27 +49,28 @@ export const CategoryFilter = ({
   };
 
   return (
-    <div className="mx-auto flex max-w-container flex-wrap items-center gap-2 px-5 sm:px-8 pt-5">
-      {siteConfig.categories.map((cat) => (
-        <button
-          key={cat.key}
-          onClick={() => handleFilter(cat.key)}
-          className={`rounded-full border px-4 py-1.5 text-meta font-medium transition-all duration-base ${
-            current === cat.key
-              ? "border-text-primary bg-text-primary text-bg-primary"
-              : "border-border bg-bg-primary text-text-tertiary hover:border-text-tertiary hover:text-text-secondary"
-          }`}
-        >
-          {labels[cat.key] || cat.label}
-        </button>
-      ))}
+    <div className="mx-auto max-w-container px-5 sm:px-8 pt-5">
+      <div className="flex flex-wrap items-center gap-2">
+        {siteConfig.categories.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => handleFilter(cat.key)}
+            className={`rounded-full border px-4 py-1.5 text-meta font-medium transition-all duration-base ${
+              current === cat.key
+                ? "border-text-primary bg-text-primary text-bg-primary"
+                : "border-border bg-bg-primary text-text-tertiary hover:border-text-tertiary hover:text-text-secondary"
+            }`}
+          >
+            {labels[cat.key] || cat.label}
+          </button>
+        ))}
+      </div>
 
       {current === "commits" && commitProjects.length > 0 && (
-        <>
-          <span className="mx-1 h-5 w-px bg-border" />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => handleProject(null)}
-            className={`rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition-all duration-base ${
+            className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-medium transition-all duration-base ${
               !currentProject
                 ? "border-cat-commits bg-cat-commits text-white"
                 : "border-border text-text-tertiary hover:border-cat-commits hover:text-cat-commits"
@@ -81,7 +82,7 @@ export const CategoryFilter = ({
             <button
               key={proj}
               onClick={() => handleProject(proj)}
-              className={`rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition-all duration-base ${
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-medium transition-all duration-base ${
                 currentProject === proj
                   ? "border-cat-commits bg-cat-commits text-white"
                   : "border-border text-text-tertiary hover:border-cat-commits hover:text-cat-commits"
@@ -90,7 +91,7 @@ export const CategoryFilter = ({
               {proj}
             </button>
           ))}
-        </>
+        </div>
       )}
     </div>
   );

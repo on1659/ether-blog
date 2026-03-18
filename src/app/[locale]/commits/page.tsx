@@ -83,10 +83,10 @@ const CommitsPage = async ({
           GitHub 커밋 기반으로 자동 생성된 개발 기록
         </p>
         {projects.length > 0 && (
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-6 flex flex-wrap gap-2.5">
             <Link
               href="/commits"
-              className={`rounded-full border px-4 py-1.5 text-meta font-medium transition-all duration-base ${
+              className={`rounded-full border px-4 py-1.5 text-[0.8125rem] font-medium transition-all duration-base ${
                 !currentProject
                   ? "border-cat-commits bg-cat-commits text-white"
                   : "border-border text-text-tertiary hover:border-cat-commits hover:text-cat-commits"
@@ -98,7 +98,7 @@ const CommitsPage = async ({
               <Link
                 key={proj}
                 href={`/commits?project=${proj}`}
-                className={`rounded-full border px-4 py-1.5 text-meta font-medium transition-all duration-base ${
+                className={`rounded-full border px-4 py-1.5 text-[0.8125rem] font-medium transition-all duration-base ${
                   currentProject === proj
                     ? "border-cat-commits bg-cat-commits text-white"
                     : "border-border text-text-tertiary hover:border-cat-commits hover:text-cat-commits"

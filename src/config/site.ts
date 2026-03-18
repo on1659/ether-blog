@@ -27,6 +27,14 @@ export const siteConfig = {
     { key: "casual", label: "Casual", color: "#FF6B35" },
     { key: "signal", label: "AI Signal", color: "#06B6D4" },
   ],
+  signalSubcategories: [
+    { key: "all", label: "전체", tags: [] },
+    { key: "hugging-face", label: "Hugging Face", tags: ["hugging-face", "huggingface", "transformers", "diffusers"] },
+    { key: "llm", label: "LLM", tags: ["llm", "gpt", "claude", "gemini", "chatgpt", "openai", "anthropic", "llama", "mistral"] },
+    { key: "agent", label: "AI Agent", tags: ["agent", "ai-agent", "mcp", "tool-use", "function-calling"] },
+    { key: "image", label: "이미지/비디오", tags: ["stable-diffusion", "midjourney", "dall-e", "sora", "image-generation", "video-generation"] },
+    { key: "news", label: "뉴스", tags: ["ai-news", "news", "release", "announcement"] },
+  ],
   projects: [
     {
       name: "LAMDiceBot",
