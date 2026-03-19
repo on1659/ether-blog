@@ -11,9 +11,19 @@ import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/i18n";
 import { isValidLocale, i18n } from "@/i18n/config";
 import type { Category } from "@/types";
+import { flagsToCategories, DEFAULT_HOME_FLAGS } from "@/types";
 import type { Locale } from "@/i18n/config";
 
 const PAGE_SIZE = 10;
+
+const getHomeCategoryFlags = async (): Promise<number> => {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: "homeCategoryFlags" } });
+    return setting ? parseInt(setting.value, 10) : DEFAULT_HOME_FLAGS;
+  } catch {
+    return DEFAULT_HOME_FLAGS;
+  }
+};
 
 const getPosts = async (category?: string, project?: string, page = 1) => {
   try {
@@ -24,8 +34,10 @@ const getPosts = async (category?: string, project?: string, page = 1) => {
         where.repoName = project;
       }
     } else {
-      // "전체"에서는 commits, hallucination 제외
-      where.category = { notIn: ["commits", "hallucination"] };
+      // "전체": DB에 저장된 비트플래그 기반 카테고리 필터링
+      const flags = await getHomeCategoryFlags();
+      const included = flagsToCategories(flags);
+      where.category = { in: included };
     }
 
     const [posts, total] = await Promise.all([

@@ -571,6 +571,71 @@ const AdminSettingsPage = () => {
         </div>
       </Section>
 
+      {/* ── 2.5 홈 "전체" 카테고리 필터 ── */}
+      <Section title="홈 카테고리 필터" icon={Layers}>
+        <p className="mb-4 text-meta text-text-tertiary">
+          메인 페이지 &ldquo;전체&rdquo; 탭에서 보여줄 카테고리를 선택하세요. 비트플래그로 저장됩니다.
+        </p>
+        <div className="space-y-3">
+          {([
+            { key: "commits", label: "Commits", bit: 1, color: "#00C471" },
+            { key: "articles", label: "Articles", bit: 2, color: "#3182F6" },
+            { key: "casual", label: "Casual", bit: 4, color: "#FF6B35" },
+            { key: "signal", label: "AI Signal", bit: 8, color: "#06B6D4" },
+            { key: "hallucination", label: "Hallucination AI", bit: 16, color: "#EF4444" },
+          ] as const).map(({ key, label, bit, color }) => {
+            const flags = parseInt(settings.homeCategoryFlags || "14", 10);
+            const checked = !!(flags & bit);
+            return (
+              <label key={key} className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    const next = checked ? flags & ~bit : flags | bit;
+                    updateSetting("homeCategoryFlags", String(next));
+                  }}
+                  className="h-4 w-4 rounded border-border accent-brand-primary"
+                />
+                <span
+                  className="inline-block h-3 w-3 rounded-full"
+                  style={{ background: color }}
+                />
+                <span className="text-card-desc text-text-primary">{label}</span>
+                <span className="text-meta text-text-muted">bit {bit}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="mt-3 rounded-lg bg-bg-secondary px-3 py-2 text-meta text-text-tertiary">
+          현재 값: <code className="font-code text-text-secondary">{settings.homeCategoryFlags || "14"}</code>
+          {" = "}
+          {(() => {
+            const f = parseInt(settings.homeCategoryFlags || "14", 10);
+            const names: string[] = [];
+            if (f & 1) names.push("commits");
+            if (f & 2) names.push("articles");
+            if (f & 4) names.push("casual");
+            if (f & 8) names.push("signal");
+            if (f & 16) names.push("hallucination");
+            return names.join(" + ") || "(없음)";
+          })()}
+        </div>
+        <button
+          onClick={saveSettings}
+          disabled={settingsSaving}
+          className="mt-3 flex items-center gap-1.5 rounded-lg bg-brand-primary px-5 py-2.5 text-meta font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {settingsSaved ? (
+            <><Check size={14} /> 저장됨</>
+          ) : settingsSaving ? (
+            "저장 중..."
+          ) : (
+            <><Save size={14} /> 저장</>
+          )}
+        </button>
+      </Section>
+
       {/* ── 3. API Key 관리 ── */}
       <Section title="API Key 관리" icon={Key}>
         <p className="mb-4 text-meta text-text-tertiary">
