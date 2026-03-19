@@ -23,13 +23,15 @@
     "commits": "Commits",
     "articles": "Articles",
     "casual": "Casual",
-    "signal": "AI Signal"
+    "signal": "AI Signal",
+    "hallucination": "Hallucination AI"
   },
   "categoryDesc": {
     "commits": "GitHub 커밋 기반으로 자동 생성된 개발 기록",
     "articles": "정리된 기술 글과 튜토리얼",
     "casual": "개발 잡담, 회고, 일상",
-    "signal": "AI 관련 최신 뉴스와 시그널"
+    "signal": "AI 관련 최신 뉴스와 시그널",
+    "hallucination": "AI 검수 실패 — 링크 오류, 품질 미달 글"
   },
   "post": {
     "minRead": "분 읽기",

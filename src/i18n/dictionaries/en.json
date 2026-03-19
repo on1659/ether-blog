@@ -23,13 +23,15 @@
     "commits": "Commits",
     "articles": "Articles",
     "casual": "Casual",
-    "signal": "AI Signal"
+    "signal": "AI Signal",
+    "hallucination": "Hallucination AI"
   },
   "categoryDesc": {
     "commits": "Auto-generated development logs from GitHub commits",
     "articles": "Organized technical articles and tutorials",
     "casual": "Dev talks, retrospectives, and daily life",
-    "signal": "Latest AI news and signals"
+    "signal": "Latest AI news and signals",
+    "hallucination": "AI validation failed — broken links, low quality"
   },
   "post": {
     "minRead": "min read",
