@@ -24,8 +24,8 @@ const getPosts = async (category?: string, project?: string, page = 1) => {
         where.repoName = project;
       }
     } else {
-      // "전체"에서는 commits 제외
-      where.category = { not: "commits" };
+      // "전체"에서는 commits, hallucination 제외
+      where.category = { notIn: ["commits", "hallucination"] };
     }
 
     const [posts, total] = await Promise.all([

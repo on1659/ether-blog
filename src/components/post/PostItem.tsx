@@ -2,12 +2,13 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import type { PostMeta } from "@/types";
 
-const gradientMap = {
+const gradientMap: Record<string, string> = {
   commits: "from-[#0D503B] to-[#00C471]",
   articles: "from-[#1A3A6B] to-[#3182F6]",
   casual: "from-[#6B2A10] to-[#FF6B35]",
   signal: "from-[#134E5E] to-[#06B6D4]",
-} as const;
+  hallucination: "from-[#7F1D1D] to-[#EF4444]",
+};
 
 const getRelativeTime = (dateStr: string, locale: string): string => {
   const now = new Date();

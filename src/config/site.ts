@@ -26,6 +26,7 @@ export const siteConfig = {
     { key: "articles", label: "Articles", color: "#3182F6" },
     { key: "casual", label: "Casual", color: "#FF6B35" },
     { key: "signal", label: "AI Signal", color: "#06B6D4" },
+    { key: "hallucination", label: "Hallucination AI", color: "#EF4444" },
   ],
   signalSubcategories: [
     { key: "all", label: "전체", tags: [] },

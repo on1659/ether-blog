@@ -40,6 +40,11 @@ model Post {
   seriesId    String?
   seriesOrder Int?
 
+  // 검수
+  validationScore  Int?      // 0~100
+  validationIssues String?   // JSON: [{severity, code, message}]
+  validatedAt      DateTime?
+
   // 조회수
   viewCount      Int      @default(0)
   botViewCount   Int      @default(0)
@@ -49,6 +54,7 @@ model Post {
   @@index([published])
   @@index([createdAt])
   @@index([projectSlug])
+  @@index([validationScore])
 }
 
 model Series {
@@ -145,4 +151,5 @@ enum Category {
   articles
   casual
   signal
+  hallucination
 }

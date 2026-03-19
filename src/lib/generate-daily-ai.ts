@@ -4,36 +4,11 @@ import { prisma } from "./prisma";
 import { calculateReadingTime } from "./markdown";
 import { fetchAINews } from "./fetch-ai-news";
 import { getAIConfig } from "./claude";
+import { getWritingStyle, buildSystemPrompt } from "@/config/writing-style";
+import { validatePost, logValidation } from "./post-validator";
 import { type RawSignalItem, SLOT_CONFIG, TOTAL_SLOTS } from "./signal-sources";
 
-const DAILY_AI_PROMPT = `당신은 "이더"라는 개발자의 기술 블로그에서 AI 뉴스 다이제스트를 작성하는 역할입니다.
-다양한 소스(Hacker News, Reddit, HuggingFace Papers, GitHub Trending, RSS)에서 수집된 AI 관련 뉴스를 바탕으로 하나의 블로그 글을 작성합니다.
-
-## 문체 규칙
-
-- "~다" 체. 친구한테 설명하듯이 자연스럽게.
-- 뉴스 나열이 아니라, 개발자 관점에서 해석과 코멘트를 곁들인다.
-- 각 뉴스에 대해 "이게 왜 중요한지" 한줄 코멘트를 추가한다.
-
-## 구조
-
-- 제목은 "AI 업데이트: {핵심 키워드}" 형식
-- 본문은 ## 섹션으로 구분 (예: 🔥 핫 토픽, 📰 뉴스, 📄 논문, ⭐ 오픈소스 등)
-- 섹션마다 뉴스 제목 + 원문 링크 + 2~3문장 해설
-- 각 항목 말미에 **출처:** [소스명](원문URL) 형태로 출처를 반드시 명시
-- 소스가 다양하면 섹션을 소스 유형별로 묶어도 좋다
-- 마지막에 > 인용구로 오늘의 한줄 정리
-- 전체 2000~4000자
-
-## 금지
-
-- 단순 번역이나 복붙
-- "~하겠습니다" 같은 존댓말
-- 이모지 남용
-
-## 응답 형식
-
-반드시 JSON으로 응답:
+const SIGNAL_RESPONSE_FORMAT = `반드시 JSON으로 응답:
 {
   "title": "AI 업데이트: 핵심 키워드 요약",
   "content": "마크다운 본문",
@@ -86,9 +61,12 @@ export const generateDailyAIPost = async (): Promise<{
   // 슬롯제 재적용 (DB에서 가져온 fresh items 기준)
   const topItems = selectFreshBySlots(freshItems);
 
-  // AI로 글 생성
+  // AI로 글 생성 (공통 글쓰기 스타일 사용)
   const { baseURL, apiKey, model } = await getAIConfig();
   const client = new OpenAI({ apiKey, baseURL });
+
+  const style = await getWritingStyle("signal");
+  const systemPrompt = buildSystemPrompt(style, SIGNAL_RESPONSE_FORMAT);
 
   const newsContext = topItems
     .map((n, i) => `${i + 1}. [${n.source}] ${n.title}\n   URL: ${n.url}\n   Score: ${n.score}${n.summary ? `\n   Summary: ${n.summary.slice(0, 200)}` : ""}`)
@@ -98,7 +76,7 @@ export const generateDailyAIPost = async (): Promise<{
     model,
     max_tokens: 6000,
     messages: [
-      { role: "system", content: DAILY_AI_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: `오늘 수집된 AI 관련 뉴스입니다 (${topItems.length}건, 다양한 소스). 이를 바탕으로 Daily AI 업데이트 글을 작성해주세요.\n\n${newsContext}\n\nJSON으로 응답해.`,
@@ -128,6 +106,16 @@ export const generateDailyAIPost = async (): Promise<{
   const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
   const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;
 
+  // 검수: URL 유효성 + 콘텐츠 품질 체크
+  const validation = await validatePost({
+    content,
+    title: parsed.title,
+    minLength: 800,
+    maxLength: 8000,
+    requireSources: true,
+  });
+
+  // 검수 실패 → hallucination 카테고리, 통과 → signal 카테고리 + published
   const post = await prisma.post.create({
     data: {
       title: parsed.title,
@@ -137,12 +125,17 @@ export const generateDailyAIPost = async (): Promise<{
       excerpt,
       excerptEn,
       slug,
-      category: "signal",
-      tags: parsed.tags || ["AI", "Daily"],
+      category: validation.passed ? "signal" : "hallucination",
+      tags: validation.passed ? (parsed.tags || ["AI", "Daily"]) : [...(parsed.tags || ["AI", "Daily"]), "검수실패"],
       readingTime,
-      published: true,
+      published: validation.passed,
+      validationScore: validation.score,
+      validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+      validatedAt: new Date(),
     },
   });
+
+  logValidation(post.id, validation);
 
   // 썸네일 설정
   await prisma.post.update({
@@ -150,22 +143,26 @@ export const generateDailyAIPost = async (): Promise<{
     data: { coverImage: `/api/thumbnail/${post.id}` },
   });
 
-  // 사용된 SignalItem에 postId 기록
-  await prisma.signalItem.updateMany({
-    where: { id: { in: topItems.map((i) => i.id) } },
-    data: { usedInPost: post.id },
-  });
+  // 검수 통과 시에만 SignalItem 소비 (실패 시 다음 실행에서 재사용)
+  if (validation.passed) {
+    await prisma.signalItem.updateMany({
+      where: { id: { in: topItems.map((i) => i.id) } },
+      data: { usedInPost: post.id },
+    });
+  }
 
-  // ISR 캐시 갱신
-  try {
-    revalidatePath("/");
-    revalidatePath("/signal");
-  } catch {
-    console.error("Revalidation failed");
+  // 검수 통과 시에만 캐시 갱신
+  if (validation.passed) {
+    try {
+      revalidatePath("/");
+      revalidatePath("/signal");
+    } catch {
+      console.error("Revalidation failed");
+    }
   }
 
   const sourceSummary = [...new Set(topItems.map((n) => n.source.split(" ")[0]))].join(", ");
-  console.log(`Generated daily AI post: ${post.id} (${topItems.length} items, sources: ${sourceSummary})`);
+  console.log(`Generated daily AI post: ${post.id} (${topItems.length} items, sources: ${sourceSummary}, validation: ${validation.passed ? "PASS" : "FAIL"} score=${validation.score})`);
 
   return { postId: post.id, skipped: false };
 };

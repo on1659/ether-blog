@@ -18,7 +18,7 @@ const TagPage = async ({ params }: PageProps) => {
   const decoded = decodeURIComponent(tag);
 
   const posts = await prisma.post.findMany({
-    where: { published: true, tags: { has: decoded } },
+    where: { published: true, tags: { has: decoded }, category: { not: "hallucination" } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true, slug: true, title: true, subtitle: true, excerpt: true,

@@ -7,7 +7,7 @@ export const GET = async () => {
   let posts: { slug: string; title: string; excerpt: string | null; category: string; createdAt: Date; tags: string[] }[] = [];
   try {
     posts = await prisma.post.findMany({
-      where: { published: true },
+      where: { published: true, category: { not: "hallucination" } },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {

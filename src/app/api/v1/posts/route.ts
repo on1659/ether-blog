@@ -20,7 +20,12 @@ export const GET = async (req: NextRequest) => {
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
 
     const where: Record<string, unknown> = {};
-    if (category) where.category = category;
+    if (category) {
+      where.category = category;
+    } else {
+      // 카테고리 미지정 시 hallucination 제외 (명시적 조회만 허용)
+      where.category = { not: "hallucination" };
+    }
     if (tag) where.tags = { has: tag };
     if (published === "true") where.published = true;
     if (published === "false") where.published = false;

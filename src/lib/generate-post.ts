@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { getCommitDetail } from "./github";
 import { generateBlogContent } from "./claude";
 import { calculateReadingTime } from "./markdown";
+import { validatePost, logValidation } from "./post-validator";
 
 const DAILY_POST_CAP = 10;
 
@@ -61,6 +62,7 @@ export const processCommits = async (
   }
 
   let processed = 0;
+  let publishedCount = 0;
   const trivialPatterns = /^(chore|style|docs|fix typo|formatting|lint|bump|merge|revert)/i;
 
   for (const commit of commits) {
@@ -102,6 +104,18 @@ export const processCommits = async (
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
       const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;
 
+      // 검수: 콘텐츠 품질 체크 (commit 글은 링크 적으므로 빠르게)
+      const validation = await validatePost({
+        content,
+        title,
+        minLength: 200,
+        maxLength: 12000,
+        skipLinkCheck: true,
+      });
+
+      // 검수 실패 → hallucination 카테고리, 통과 → commits 카테고리
+      const shouldPublish = watchedRepo.autoPublish && validation.passed;
+
       const post = await prisma.post.create({
         data: {
           title,
@@ -111,10 +125,13 @@ export const processCommits = async (
           excerpt,
           excerptEn,
           slug,
-          category: "commits",
-          tags,
+          category: validation.passed ? "commits" : "hallucination",
+          tags: validation.passed ? tags : [...tags, "검수실패"],
           readingTime,
-          published: watchedRepo.autoPublish,
+          published: shouldPublish,
+          validationScore: validation.score,
+          validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+          validatedAt: new Date(),
           commitHash: commit.id,
           commitUrl: detail.url,
           repoName: repo,
@@ -123,6 +140,8 @@ export const processCommits = async (
         },
       });
 
+      logValidation(post.id, validation);
+
       // 텍스트 기반 썸네일 URL 세팅 (API route에서 동적 생성)
       await prisma.post.update({
         where: { id: post.id },
@@ -130,19 +149,20 @@ export const processCommits = async (
       });
 
       processed++;
-      console.log(`Generated post for commit ${commit.id.slice(0, 7)}`);
+      if (shouldPublish) publishedCount++;
+      console.log(`Generated post for commit ${commit.id.slice(0, 7)} (validation: ${validation.passed ? "PASS" : "FAIL"})`);
     } catch (error) {
       console.error(`Failed to process commit ${commit.id}:`, error);
     }
   }
 
-  // 글이 생성되었으면 ISR 캐시 갱신
-  if (processed > 0) {
+  // 실제 published된 글이 있을 때만 ISR 캐시 갱신
+  if (publishedCount > 0) {
     try {
       revalidatePath("/");
       revalidatePath("/commits");
       revalidatePath(`/commits/${repo.toLowerCase()}`);
-      console.log(`Revalidated paths after ${processed} posts created.`);
+      console.log(`Revalidated paths after ${publishedCount} posts published.`);
     } catch {
       console.error("Revalidation failed, pages will update within 1 hour.");
     }

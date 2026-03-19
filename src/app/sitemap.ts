@@ -8,7 +8,7 @@ const sitemap = async (): Promise<MetadataRoute.Sitemap> => {
   let postUrls: MetadataRoute.Sitemap = [];
   try {
     const posts = await prisma.post.findMany({
-      where: { published: true },
+      where: { published: true, category: { not: "hallucination" } },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     });

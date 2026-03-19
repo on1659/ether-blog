@@ -6,6 +6,7 @@ const categoryDot: Record<Category, string> = {
   articles: "bg-cat-articles",
   casual: "bg-cat-casual",
   signal: "bg-cat-signal",
+  hallucination: "bg-[#EF4444]",
 };
 
 interface RecentPostsSidebarProps {

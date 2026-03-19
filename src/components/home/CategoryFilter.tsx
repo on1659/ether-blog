@@ -51,7 +51,7 @@ export const CategoryFilter = ({
   return (
     <div className="mx-auto max-w-container px-5 sm:px-8 pt-5">
       <div className="flex flex-wrap items-center gap-2">
-        {siteConfig.categories.map((cat) => (
+        {siteConfig.categories.filter((cat) => cat.key !== "hallucination").map((cat) => (
           <button
             key={cat.key}
             onClick={() => handleFilter(cat.key)}
