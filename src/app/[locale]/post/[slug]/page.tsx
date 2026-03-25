@@ -11,6 +11,7 @@ import { TableOfContents } from "@/components/post/TableOfContents";
 import { LanguageToggle } from "@/components/post/LanguageToggle";
 import { PostNav } from "@/components/post/PostNav";
 import { GiscusComments } from "@/components/post/GiscusComments";
+import { HtmlContent } from "@/components/post/HtmlContent";
 import { ViewTracker } from "./ViewTracker";
 import type { Category } from "@/types";
 import Link from "next/link";
@@ -49,13 +50,14 @@ const PostPage = async ({ params }: PageProps) => {
 
   if (!post || !post.published) notFound();
 
+  const isHtmlPost = post.contentType === "html";
   const hasEnglish = !!post.contentEn;
   const isEn = locale === "en";
   const defaultLang = isEn && hasEnglish ? "en" : "ko";
-  const headings = extractHeadings(post.content);
-  const content = await renderMarkdown(post.content);
-  const headingsEn = hasEnglish ? extractHeadings(post.contentEn!) : [];
-  const contentEn = hasEnglish ? await renderMarkdown(post.contentEn!) : null;
+  const headings = isHtmlPost ? [] : extractHeadings(post.content);
+  const content = isHtmlPost ? null : await renderMarkdown(post.content);
+  const headingsEn = hasEnglish && !isHtmlPost ? extractHeadings(post.contentEn!) : [];
+  const contentEn = hasEnglish && !isHtmlPost ? await renderMarkdown(post.contentEn!) : null;
 
   // 이전/다음 글
   const [prev, next] = await Promise.all([
@@ -122,7 +124,24 @@ const PostPage = async ({ params }: PageProps) => {
         viewCount={post.viewCount}
       />
 
-      {hasEnglish && contentEn ? (
+      {isHtmlPost ? (
+        <div className="mx-auto max-w-[1000px] px-5 sm:px-8 pb-20 pt-10">
+          <HtmlContent html={post.content} />
+          {post.tags.length > 0 && (
+            <div className="mt-12 flex flex-wrap gap-2 border-t border-border pt-8">
+              {post.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/tag/${tag}`}
+                  className="rounded-full border border-border px-3.5 py-1.5 text-meta font-medium text-text-secondary transition-all duration-base hover:border-brand-primary hover:text-brand-primary"
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : hasEnglish && contentEn ? (
         <LanguageToggle
           defaultLang={defaultLang}
           contentKo={

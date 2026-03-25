@@ -44,12 +44,18 @@ export const PUT = async (req: NextRequest, { params }: RouteParams) => {
     const body = await req.json();
 
     // Recalculate reading time and excerpt when content changes
+    const isHtml = body.contentType === "html";
     if (body.content) {
-      body.readingTime = calculateReadingTime(body.content);
-      body.excerpt = body.content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+      const plainText = isHtml ? body.content.replace(/<[^>]*>/g, "") : body.content;
+      body.readingTime = calculateReadingTime(plainText);
+      body.excerpt = isHtml
+        ? plainText.replace(/\s+/g, " ").trim().slice(0, 200)
+        : body.content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
     }
     if (body.contentEn) {
-      body.excerptEn = body.contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+      body.excerptEn = isHtml
+        ? body.contentEn.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 200)
+        : body.contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200);
     }
 
     // Bust thumbnail cache when category changes (dynamic thumbnails use category colors)

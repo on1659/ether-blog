@@ -27,6 +27,7 @@ export const POST = async (req: NextRequest) => {
       title, subtitle, content, category,
       tags = [], published = false,
       titleEn, contentEn, slug: customSlug,
+      contentType = "markdown",
     } = body;
 
     if (!title || !content || !category) {
@@ -49,8 +50,14 @@ export const POST = async (req: NextRequest) => {
       }
     }
 
-    const readingTime = calculateReadingTime(content);
-    const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+    const readingTime = calculateReadingTime(
+      contentType === "html"
+        ? content.replace(/<[^>]*>/g, "")
+        : content
+    );
+    const excerpt = contentType === "html"
+      ? content.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 200)
+      : content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
     const excerptEn = contentEn
       ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200)
       : undefined;
@@ -60,6 +67,7 @@ export const POST = async (req: NextRequest) => {
         title,
         subtitle: subtitle || undefined,
         content,
+        contentType,
         excerpt,
         category,
         tags,

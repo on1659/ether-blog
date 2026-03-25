@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Upload, Code, FileText, Globe, ArrowLeft, Columns2, Eye, PenLine } from "lucide-react";
+import { Upload, Code, FileText, Globe, ArrowLeft, Columns2, Eye, PenLine, FileCode2 } from "lucide-react";
 
 const CATEGORIES = ["commits", "articles", "casual", "signal"] as const;
 
@@ -55,8 +55,10 @@ const EditPostPage = () => {
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [contentType, setContentType] = useState<"markdown" | "html">("markdown");
   const [activeLang, setActiveLang] = useState<"ko" | "en">("ko");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const htmlFileRef = useRef<HTMLInputElement>(null);
 
   const activeContent = activeLang === "ko" ? contentKo : contentEn;
   const setActiveContent = activeLang === "ko" ? setContentKo : setContentEn;
@@ -76,6 +78,7 @@ const EditPostPage = () => {
           setTags((post.tags || []).join(", "));
           setContentKo(post.content || "");
           setContentEn(post.contentEn || "");
+          setContentType(post.contentType || "markdown");
           setPublished(post.published ?? true);
         } else {
           alert("글을 불러올 수 없습니다.");
@@ -124,23 +127,50 @@ const EditPostPage = () => {
     [applyFrontmatter]
   );
 
+  const handleHtmlUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string;
+        setContentKo(text);
+        setContentType("html");
+        setActiveLang("ko");
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    },
+    []
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
-      if (!file || !file.name.endsWith(".md")) return;
+      if (!file) return;
+      const isHtml = /\.html?$/i.test(file.name);
+      const isMd = /\.mdx?$|\.markdown$/i.test(file.name);
+      if (!isHtml && !isMd) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
-        const { frontmatter, content } = parseFrontmatter(text);
-        applyFrontmatter(frontmatter);
-        const isEn = /[-_.]en\.md$/i.test(file.name);
-        if (isEn) {
-          setContentEn(content);
-          setActiveLang("en");
-        } else {
-          setContentKo(content);
+        if (isHtml) {
+          setContentKo(text);
+          setContentType("html");
           setActiveLang("ko");
+        } else {
+          const { frontmatter, content } = parseFrontmatter(text);
+          applyFrontmatter(frontmatter);
+          setContentType("markdown");
+          const isEn = /[-_.]en\.md$/i.test(file.name);
+          if (isEn) {
+            setContentEn(content);
+            setActiveLang("en");
+          } else {
+            setContentKo(content);
+            setActiveLang("ko");
+          }
         }
       };
       reader.readAsText(file);
@@ -199,6 +229,7 @@ const EditPostPage = () => {
           title: title.trim(),
           subtitle: subtitle.trim() || null,
           content: contentKo,
+          contentType,
           contentEn: contentEn.trim() || null,
           titleEn: contentEn.trim() ? title.trim() : null,
           category,
@@ -270,6 +301,24 @@ const EditPostPage = () => {
             type="file"
             accept=".md,.markdown,.mdx"
             onChange={handleMdUpload("en")}
+            className="hidden"
+          />
+          <button
+            onClick={() => htmlFileRef.current?.click()}
+            className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-meta font-medium transition-colors ${
+              contentType === "html"
+                ? "border-cat-signal bg-cat-signal/10 text-cat-signal"
+                : "border-border text-text-secondary hover:bg-bg-secondary"
+            }`}
+          >
+            <FileCode2 size={13} />
+            HTML
+          </button>
+          <input
+            ref={htmlFileRef}
+            type="file"
+            accept=".html,.htm"
+            onChange={handleHtmlUpload}
             className="hidden"
           />
           <button
@@ -375,7 +424,7 @@ const EditPostPage = () => {
       </div>
 
       {/* Language tabs */}
-      <div className="mb-0 flex border-b border-border">
+      <div className="mb-0 flex items-center border-b border-border">
         <button
           onClick={() => { setActiveLang("ko"); }}
           className={`px-5 py-2.5 text-meta font-medium transition-all ${
@@ -398,6 +447,11 @@ const EditPostPage = () => {
           English (EN)
           {contentEn && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cat-commits" />}
         </button>
+        {contentType === "html" && (
+          <span className="ml-auto mr-2 rounded-full bg-cat-signal/10 px-2.5 py-0.5 text-xs font-semibold text-cat-signal">
+            HTML
+          </span>
+        )}
       </div>
 
       {/* Content area */}
@@ -415,8 +469,8 @@ const EditPostPage = () => {
               onChange={(e) => setActiveContent(e.target.value)}
               placeholder={
                 activeLang === "ko"
-                  ? "마크다운으로 작성하세요... (.md 파일을 드래그 앤 드롭할 수도 있습니다)"
-                  : "Write in markdown... (drag & drop .md files)"
+                  ? "마크다운 또는 HTML로 작성하세요... (.md/.html 파일을 드래그 앤 드롭할 수도 있습니다)"
+                  : "Write in markdown or HTML... (drag & drop .md/.html files)"
               }
               className={`h-[500px] w-full resize-y bg-transparent p-6 font-code text-[14px] leading-[1.7] text-text-primary outline-none placeholder:text-text-muted ${viewMode === "edit" ? "rounded-b-xl" : ""}`}
             />
@@ -425,8 +479,8 @@ const EditPostPage = () => {
                 <FileText size={40} strokeWidth={1} />
                 <span className="text-sm">
                   {activeLang === "ko"
-                    ? ".md 파일을 여기에 드롭하세요"
-                    : "Drop .md file here"}
+                    ? ".md 또는 .html 파일을 여기에 드롭하세요"
+                    : "Drop .md or .html file here"}
                 </span>
               </div>
             )}

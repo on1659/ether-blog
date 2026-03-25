@@ -12,10 +12,10 @@ export const GiscusComments = () => {
 
     const script = document.createElement("script");
     script.src = "https://giscus.app/client.js";
-    script.setAttribute("data-repo", "your-username/radar-blog");
-    script.setAttribute("data-repo-id", "");
-    script.setAttribute("data-category", "Comments");
-    script.setAttribute("data-category-id", "");
+    script.setAttribute("data-repo", "on1659/radar-blog");
+    script.setAttribute("data-repo-id", "R_kgDORiWQIg");
+    script.setAttribute("data-category", "General");
+    script.setAttribute("data-category-id", "DIC_kwDORiWQIs4C5NKV");
     script.setAttribute("data-mapping", "pathname");
     script.setAttribute("data-strict", "0");
     script.setAttribute("data-reactions-enabled", "1");
