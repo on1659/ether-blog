@@ -55,7 +55,6 @@ const EditPostPage = () => {
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
-  const [contentType, setContentType] = useState<"markdown" | "html">("markdown");
   const [activeLang, setActiveLang] = useState<"ko" | "en">("ko");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const htmlFileRef = useRef<HTMLInputElement>(null);
@@ -78,7 +77,6 @@ const EditPostPage = () => {
           setTags((post.tags || []).join(", "));
           setContentKo(post.content || "");
           setContentEn(post.contentEn || "");
-          setContentType(post.contentType || "markdown");
           setPublished(post.published ?? true);
         } else {
           alert("글을 불러올 수 없습니다.");
@@ -127,6 +125,27 @@ const EditPostPage = () => {
     [applyFrontmatter]
   );
 
+  const insertHtmlAsArtifact = useCallback(
+    (html: string) => {
+      const artifact = `\n\`\`\`html:artifact\n${html.trim()}\n\`\`\`\n`;
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const before = activeContent.slice(0, start);
+        const after = activeContent.slice(start);
+        setActiveContent(before + artifact + after);
+        requestAnimationFrame(() => {
+          const pos = start + artifact.length;
+          textarea.selectionStart = textarea.selectionEnd = pos;
+          textarea.focus();
+        });
+      } else {
+        setActiveContent(activeContent + artifact);
+      }
+    },
+    [activeContent, setActiveContent]
+  );
+
   const handleHtmlUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -134,17 +153,12 @@ const EditPostPage = () => {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
-        if (activeLang === "en") {
-          setContentEn(text);
-        } else {
-          setContentKo(text);
-        }
-        setContentType("html");
+        insertHtmlAsArtifact(text);
       };
       reader.readAsText(file);
       e.target.value = "";
     },
-    [activeLang]
+    [insertHtmlAsArtifact]
   );
 
   const handleDrop = useCallback(
@@ -159,13 +173,10 @@ const EditPostPage = () => {
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
         if (isHtml) {
-          setContentKo(text);
-          setContentType("html");
-          setActiveLang("ko");
+          insertHtmlAsArtifact(text);
         } else {
           const { frontmatter, content } = parseFrontmatter(text);
           applyFrontmatter(frontmatter);
-          setContentType("markdown");
           const isEn = /[-_.]en\.md$/i.test(file.name);
           if (isEn) {
             setContentEn(content);
@@ -178,7 +189,7 @@ const EditPostPage = () => {
       };
       reader.readAsText(file);
     },
-    [applyFrontmatter]
+    [applyFrontmatter, insertHtmlAsArtifact]
   );
 
   const insertArtifact = () => {
@@ -194,16 +205,12 @@ const EditPostPage = () => {
     }
   };
 
-  const refreshPreview = useCallback(async (content: string, type: string) => {
-    if (type === "html") {
-      setPreviewHtml(content);
-      return;
-    }
+  const refreshPreview = useCallback(async (content: string) => {
     try {
       const res = await fetch("/api/admin/posts/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, contentType: type }),
+        body: JSON.stringify({ content }),
       });
       const data = await res.json();
       if (data.success) setPreviewHtml(data.data);
@@ -217,10 +224,10 @@ const EditPostPage = () => {
     if (viewMode === "edit") return;
     if (previewTimer.current) clearTimeout(previewTimer.current);
     previewTimer.current = setTimeout(() => {
-      refreshPreview(activeContent, contentType);
+      refreshPreview(activeContent);
     }, 600);
     return () => { if (previewTimer.current) clearTimeout(previewTimer.current); };
-  }, [activeContent, viewMode, contentType, refreshPreview]);
+  }, [activeContent, viewMode, refreshPreview]);
 
   const handleSave = async () => {
     if (!title.trim() || !contentKo.trim()) {
@@ -236,7 +243,6 @@ const EditPostPage = () => {
           title: title.trim(),
           subtitle: subtitle.trim() || null,
           content: contentKo,
-          contentType,
           contentEn: contentEn.trim() || null,
           titleEn: contentEn.trim() ? title.trim() : null,
           category,
@@ -312,11 +318,7 @@ const EditPostPage = () => {
           />
           <button
             onClick={() => htmlFileRef.current?.click()}
-            className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-meta font-medium transition-colors ${
-              contentType === "html"
-                ? "border-cat-signal bg-cat-signal/10 text-cat-signal"
-                : "border-border text-text-secondary hover:bg-bg-secondary"
-            }`}
+            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-meta font-medium text-text-secondary transition-colors hover:bg-bg-secondary"
           >
             <FileCode2 size={13} />
             HTML
@@ -454,11 +456,6 @@ const EditPostPage = () => {
           English (EN)
           {contentEn && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cat-commits" />}
         </button>
-        {contentType === "html" && (
-          <span className="ml-auto mr-2 rounded-full bg-cat-signal/10 px-2.5 py-0.5 text-xs font-semibold text-cat-signal">
-            HTML
-          </span>
-        )}
       </div>
 
       {/* Content area */}
@@ -495,20 +492,11 @@ const EditPostPage = () => {
         )}
         {/* Preview pane */}
         {viewMode !== "edit" && (
-          <div className={`overflow-y-auto ${contentType === "html" ? "" : "p-6"} ${viewMode === "split" ? "w-1/2" : "w-full"}`}>
-            {contentType === "html" ? (
-              <iframe
-                srcDoc={previewHtml}
-                sandbox="allow-scripts"
-                className="h-full min-h-[500px] w-full border-0"
-                title="HTML preview"
-              />
-            ) : (
-              <div
-                className="prose max-w-none p-6"
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
-              />
-            )}
+          <div className={`overflow-y-auto p-6 ${viewMode === "split" ? "w-1/2" : "w-full"}`}>
+            <div
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         )}
       </div>
@@ -517,13 +505,7 @@ const EditPostPage = () => {
       <div className="mt-4 flex items-center justify-between">
         <span className="text-meta text-text-muted">
           {activeContent.length > 0 &&
-            (() => {
-              const text = contentType === "html"
-                ? activeContent.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()
-                : activeContent;
-              const charCount = text.replace(/\s/g, "").length;
-              return `${charCount}자 · 약 ${Math.max(1, Math.ceil(charCount / 400))}분 읽기`;
-            })()}
+            `${activeContent.length}자 · 약 ${Math.max(1, Math.ceil(activeContent.replace(/\s/g, "").length / 400))}분 읽기`}
           {contentKo && contentEn && (
             <span className="ml-2 text-cat-commits">KO + EN</span>
           )}

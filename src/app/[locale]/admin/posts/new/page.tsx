@@ -52,7 +52,6 @@ const NewPostPage = () => {
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
-  const [contentType, setContentType] = useState<"markdown" | "html">("markdown");
   const [activeLang, setActiveLang] = useState<"ko" | "en">("ko");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const htmlFileRef = useRef<HTMLInputElement>(null);
@@ -93,6 +92,28 @@ const NewPostPage = () => {
     [applyFrontmatter]
   );
 
+  const insertHtmlAsArtifact = useCallback(
+    (html: string) => {
+      const artifact = `\n\`\`\`html:artifact\n${html.trim()}\n\`\`\`\n`;
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const before = activeContent.slice(0, start);
+        const after = activeContent.slice(start);
+        setActiveContent(before + artifact + after);
+        // 커서를 삽입된 블록 뒤로 이동
+        requestAnimationFrame(() => {
+          const pos = start + artifact.length;
+          textarea.selectionStart = textarea.selectionEnd = pos;
+          textarea.focus();
+        });
+      } else {
+        setActiveContent(activeContent + artifact);
+      }
+    },
+    [activeContent, setActiveContent]
+  );
+
   const handleHtmlUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -100,19 +121,14 @@ const NewPostPage = () => {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
-        if (activeLang === "en") {
-          setContentEn(text);
-        } else {
-          setContentKo(text);
-        }
-        setContentType("html");
+        insertHtmlAsArtifact(text);
         const titleMatch = text.match(/<title>(.*?)<\/title>/i);
         if (titleMatch && !title) setTitle(titleMatch[1]);
       };
       reader.readAsText(file);
       e.target.value = "";
     },
-    [title, activeLang]
+    [title, insertHtmlAsArtifact]
   );
 
   const handleDrop = useCallback(
@@ -127,15 +143,12 @@ const NewPostPage = () => {
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
         if (isHtml) {
-          setContentKo(text);
-          setContentType("html");
-          setActiveLang("ko");
+          insertHtmlAsArtifact(text);
           const titleMatch = text.match(/<title>(.*?)<\/title>/i);
           if (titleMatch && !title) setTitle(titleMatch[1]);
         } else {
           const { frontmatter, content } = parseFrontmatter(text);
           applyFrontmatter(frontmatter);
-          setContentType("markdown");
           const isEn = /[-_.]en\.md$/i.test(file.name);
           if (isEn) {
             setContentEn(content);
@@ -164,16 +177,12 @@ const NewPostPage = () => {
     }
   };
 
-  const refreshPreview = useCallback(async (content: string, type: string) => {
-    if (type === "html") {
-      setPreviewHtml(content);
-      return;
-    }
+  const refreshPreview = useCallback(async (content: string) => {
     try {
       const res = await fetch("/api/admin/posts/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, contentType: type }),
+        body: JSON.stringify({ content }),
       });
       const data = await res.json();
       if (data.success) setPreviewHtml(data.data);
@@ -187,10 +196,10 @@ const NewPostPage = () => {
     if (viewMode === "edit") return;
     if (previewTimer.current) clearTimeout(previewTimer.current);
     previewTimer.current = setTimeout(() => {
-      refreshPreview(activeContent, contentType);
+      refreshPreview(activeContent);
     }, 600);
     return () => { if (previewTimer.current) clearTimeout(previewTimer.current); };
-  }, [activeContent, viewMode, contentType, refreshPreview]);
+  }, [activeContent, viewMode, refreshPreview]);
 
   const handleSave = async () => {
     if (!title.trim() || !contentKo.trim()) {
@@ -207,7 +216,6 @@ const NewPostPage = () => {
           subtitle: subtitle.trim() || undefined,
           slug: slug.trim() || undefined,
           content: contentKo,
-          contentType,
           contentEn: contentEn.trim() || undefined,
           titleEn: contentEn.trim() ? title.trim() : undefined,
           category,
@@ -267,11 +275,7 @@ const NewPostPage = () => {
           />
           <button
             onClick={() => htmlFileRef.current?.click()}
-            className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-meta font-medium transition-colors ${
-              contentType === "html"
-                ? "border-cat-signal bg-cat-signal/10 text-cat-signal"
-                : "border-border text-text-secondary hover:bg-bg-secondary"
-            }`}
+            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-meta font-medium text-text-secondary transition-colors hover:bg-bg-secondary"
           >
             <FileCode2 size={13} />
             HTML
@@ -410,11 +414,6 @@ const NewPostPage = () => {
           English (EN)
           {contentEn && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cat-commits" />}
         </button>
-        {contentType === "html" && (
-          <span className="ml-auto mr-2 rounded-full bg-cat-signal/10 px-2.5 py-0.5 text-xs font-semibold text-cat-signal">
-            HTML
-          </span>
-        )}
       </div>
 
       {/* Content area */}
@@ -451,20 +450,11 @@ const NewPostPage = () => {
         )}
         {/* Preview pane */}
         {viewMode !== "edit" && (
-          <div className={`overflow-y-auto ${contentType === "html" ? "" : "p-6"} ${viewMode === "split" ? "w-1/2" : "w-full"}`}>
-            {contentType === "html" ? (
-              <iframe
-                srcDoc={previewHtml}
-                sandbox="allow-scripts"
-                className="h-full min-h-[500px] w-full border-0"
-                title="HTML preview"
-              />
-            ) : (
-              <div
-                className="prose max-w-none p-6"
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
-              />
-            )}
+          <div className={`overflow-y-auto p-6 ${viewMode === "split" ? "w-1/2" : "w-full"}`}>
+            <div
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         )}
       </div>
@@ -473,13 +463,7 @@ const NewPostPage = () => {
       <div className="mt-4 flex items-center justify-between">
         <span className="text-meta text-text-muted">
           {activeContent.length > 0 &&
-            (() => {
-              const text = contentType === "html"
-                ? activeContent.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()
-                : activeContent;
-              const charCount = text.replace(/\s/g, "").length;
-              return `${charCount}자 · 약 ${Math.max(1, Math.ceil(charCount / 400))}분 읽기`;
-            })()}
+            `${activeContent.length}자 · 약 ${Math.max(1, Math.ceil(activeContent.replace(/\s/g, "").length / 400))}분 읽기`}
           {contentKo && contentEn && (
             <span className="ml-2 text-cat-commits">KO + EN</span>
           )}
