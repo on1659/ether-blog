@@ -39,6 +39,9 @@ export const RSS_FEEDS = [
   { name: "Google AI Blog", url: "http://googleaiblog.blogspot.com/atom.xml" },
   { name: "HuggingFace Blog", url: "https://huggingface.co/blog/feed.xml" },
   { name: "Simon Willison", url: "https://simonwillison.net/atom/everything/" },
+  // 신규 (P1 - 공식 AI 기업 블로그)
+  { name: "Anthropic Blog", url: "https://www.anthropic.com/rss.xml" },
+  { name: "Google DeepMind", url: "https://deepmind.google/blog/rss.xml" },
 ];
 
 /* ───── AI 키워드 필터 ───── */
