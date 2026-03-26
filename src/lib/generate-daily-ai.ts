@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
-import { prisma } from "./prisma";
+import { prisma, nextSlug } from "./prisma";
 import { calculateReadingTime } from "./markdown";
 import { fetchAINews } from "./fetch-ai-news";
 import { getAIConfig } from "./claude";
@@ -66,7 +66,7 @@ export const generateDailyAIPost = async (): Promise<{
   const client = new OpenAI({ apiKey, baseURL });
 
   const style = await getWritingStyle("signal");
-  const systemPrompt = buildSystemPrompt(style, SIGNAL_RESPONSE_FORMAT);
+  const systemPrompt = buildSystemPrompt(style, SIGNAL_RESPONSE_FORMAT, model);
 
   const newsContext = topItems
     .map((n, i) => `${i + 1}. [${n.source}] ${n.title}\n   URL: ${n.url}\n   Score: ${n.score}${n.summary ? `\n   Summary: ${n.summary.slice(0, 200)}` : ""}`)
@@ -100,8 +100,8 @@ export const generateDailyAIPost = async (): Promise<{
   const content = tokenBadge + parsed.content;
   const contentEn = parsed.contentEn ? tokenBadge + parsed.contentEn : null;
 
-  // DB 저장 (slug = cuid 기반, 경합 불가)
-  const slug = `signal-${crypto.randomUUID().slice(0, 12)}`;
+  // DB 저장 (순차 숫자 slug)
+  const slug = await nextSlug();
   const readingTime = calculateReadingTime(content);
   const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
   const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;

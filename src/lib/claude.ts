@@ -103,7 +103,7 @@ export const generateBlogContent = async ({
   const category: WritingCategory = brief ? "brief" : "commits";
   const style = await getWritingStyle(category);
   const responseFormat = brief ? BRIEF_RESPONSE_FORMAT : COMMITS_RESPONSE_FORMAT;
-  let systemPrompt = buildSystemPrompt(style, responseFormat);
+  let systemPrompt = buildSystemPrompt(style, responseFormat, model);
   if (customPrompt) {
     systemPrompt += `\n\n## 추가 지시사항\n\n${customPrompt}`;
   }

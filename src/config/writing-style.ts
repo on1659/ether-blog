@@ -142,9 +142,94 @@ export const getWritingStyle = async (category: WritingCategory): Promise<Writin
   }
 };
 
-/** WritingStyle → 시스템 프롬프트 문자열 조립 */
-export const buildSystemPrompt = (style: WritingStyle, responseFormat: string): string =>
-  `${style.persona}
+/* ───── 모델별 프롬프트 보정 ───── */
+
+interface ModelHint {
+  /** 모델 이름 패턴 (소문자 매칭) */
+  match: (model: string) => boolean;
+  /** 시스템 프롬프트 앞에 추가할 지시 */
+  preamble: string;
+  /** 시스템 프롬프트 뒤에 추가할 강조 */
+  postscript: string;
+}
+
+const MODEL_HINTS: ModelHint[] = [
+  {
+    match: (m) => m.includes("claude") || m.includes("anthropic"),
+    preamble: `<role>
+당신은 radarlog.kr 테크 블로그의 시니어 테크 에디터다.
+단순 뉴스 전달이 아니라, 개발자가 읽고 "아 그래서 이게 중요하구나"를 느끼게 하는 글을 쓴다.
+</role>
+
+<style_guide>
+- 글의 흐름을 자연스러운 산문(prose)으로 이어가라. 불릿 포인트 나열 금지.
+- 각 뉴스를 독립된 섹션이 아닌, 하나의 스토리로 엮어라. 항목 간 맥락과 흐름이 있어야 한다.
+- 기술적 배경이 필요하면 괄호나 부연 설명으로 자연스럽게 녹여라.
+- 제목 다음의 첫 문장이 가장 중요하다 — 독자를 즉시 끌어당기는 hook으로 시작하라.
+- 마크다운 볼드(**)는 정말 핵심 키워드에만. 남용 금지.
+</style_guide>
+
+<quality_bar>
+- 각 뉴스 항목에 대해: 팩트(무엇) → 맥락(왜 지금) → 영향(개발자에게 어떤 의미) 3단계로 서술
+- 관련 뉴스끼리 묶어서 더 큰 트렌드를 짚어라 (예: "이번 주는 에이전트 프레임워크 전쟁이다")
+- 단순 요약이 아닌, 필자의 시각이 담긴 코멘트를 넣어라
+- 전체 3000~5000자
+</quality_bar>`,
+    postscript: "",
+  },
+  {
+    match: (m) => m.includes("glm") || m.includes("z.ai"),
+    preamble: `## ⚠️ 중요 지시
+- 반드시 한국어로 작성하라. 중국어 절대 금지.
+- 뉴스를 나열만 하지 말고, 각 항목마다 깊이 있는 분석을 작성하라:
+  1) 이 뉴스가 왜 중요한지 (업계 맥락, 경쟁 구도)
+  2) 개발자에게 어떤 영향이 있는지 (실무 관점)
+  3) 관련 기술 배경 설명 (모르는 독자도 이해할 수 있게)
+- 각 항목당 최소 4~6문장으로 충분히 설명하라. 짧게 끊지 마라.
+- 전체 글 길이는 3000~5000자를 목표로 하라.
+- 존댓말 금지. "~다" 체로만 쓴다.
+- 항목 간 연결고리가 있으면 언급하라 (예: "앞서 언급한 X와 맞물려...")`,
+    postscript: `## 최종 체크리스트
+1. 모든 문장이 한국어인가? (중국어 섞이면 실패)
+2. 각 뉴스에 4문장 이상의 분석이 있는가? (1~2문장이면 실패)
+3. 전체 글이 3000자 이상인가?
+4. "~합니다/~됩니다" 존댓말이 없는가?
+5. JSON 형식이 올바른가?`,
+  },
+  {
+    match: (m) => m.includes("grok"),
+    preamble: `## ⚠️ 중요 지시
+- 유머나 밈 표현을 자제하고, 기술적 정확성에 집중하라.
+- 각 뉴스 항목에 원문 링크를 반드시 포함하라.`,
+    postscript: "",
+  },
+  {
+    match: (m) => m.includes("gemini") || m.includes("google"),
+    preamble: `## ⚠️ 중요 지시
+- 안전 면책(disclaimer)이나 "I'm an AI" 류 문구를 넣지 마라.
+- 블로그 글처럼 자연스러운 톤을 유지하라.`,
+    postscript: "",
+  },
+  {
+    match: (m) => m.includes("gpt"),
+    preamble: `## ⚠️ 중요 지시
+- "Sure!" "Absolutely!" 같은 영어 필러 금지.
+- 마크다운 볼드(**) 남용 금지. 정말 강조할 단어만 볼드.`,
+    postscript: "",
+  },
+];
+
+const getModelHint = (model: string): { preamble: string; postscript: string } => {
+  const lower = model.toLowerCase();
+  const hint = MODEL_HINTS.find((h) => h.match(lower));
+  return hint ?? { preamble: "", postscript: "" };
+};
+
+/** WritingStyle → 시스템 프롬프트 문자열 조립 (모델별 보정 포함) */
+export const buildSystemPrompt = (style: WritingStyle, responseFormat: string, model?: string): string => {
+  const { preamble, postscript } = model ? getModelHint(model) : { preamble: "", postscript: "" };
+
+  return `${preamble ? preamble + "\n\n" : ""}${style.persona}
 
 ## 문체 규칙
 
@@ -168,7 +253,8 @@ ${style.prohibitions}
 
 ## 응답 형식
 
-${responseFormat}`;
+${responseFormat}${postscript ? "\n\n" + postscript : ""}`;
+};
 
 /** DB 키 목록 export (admin API에서 사용) */
 export const WRITING_STYLE_KEYS = STYLE_KEYS;
