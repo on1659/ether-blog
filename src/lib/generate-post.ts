@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { prisma } from "./prisma";
+import { prisma, nextSlug } from "./prisma";
 import { getCommitDetail } from "./github";
 import { generateBlogContent } from "./claude";
 import { calculateReadingTime } from "./markdown";
@@ -98,7 +98,7 @@ export const processCommits = async (
         brief: true,
       });
 
-      const slug = `commits-${crypto.randomUUID().slice(0, 12)}`;
+      const slug = await nextSlug();
 
       const readingTime = calculateReadingTime(content);
       const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);

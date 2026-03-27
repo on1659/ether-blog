@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma, nextSlug } from "@/lib/prisma";
 import { calculateReadingTime } from "@/lib/markdown";
 import type { ApiResponse } from "@/types";
 
@@ -9,11 +9,6 @@ const requireAdmin = async () => {
   const session = await auth();
   const user = session?.user as { isAdmin?: boolean } | undefined;
   return session && user?.isAdmin;
-};
-
-const nextSlug = async (): Promise<string> => {
-  const count = await prisma.post.count();
-  return String(count + 1);
 };
 
 export const POST = async (req: NextRequest) => {

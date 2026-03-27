@@ -22,7 +22,7 @@ const AdminPostsPage = () => {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "100" });
+      const params = new URLSearchParams({ limit: "9999" });
       if (filter !== "all") params.set("category", filter);
       const res = await fetch(`/api/v1/posts?${params}`);
       const data = await res.json();

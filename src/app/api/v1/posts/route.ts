@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { prisma, nextSlug } from "@/lib/prisma";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { calculateReadingTime } from "@/lib/markdown";
 import type { ApiResponse } from "@/types";
-
-const nextSlug = async (): Promise<string> => {
-  const count = await prisma.post.count();
-  return String(count + 1);
-};
 
 export const GET = async (req: NextRequest) => {
   try {
@@ -17,7 +12,7 @@ export const GET = async (req: NextRequest) => {
     const tag = searchParams.get("tag");
     const published = searchParams.get("published");
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
+    const limit = parseInt(searchParams.get("limit") || "20");
 
     const where: Record<string, unknown> = {};
     if (category) {
