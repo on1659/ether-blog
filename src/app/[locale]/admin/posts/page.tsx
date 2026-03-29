@@ -1,10 +1,45 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus, RefreshCw } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus, RefreshCw, X, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PostMeta } from "@/types";
+
+/* ───── Toast ───── */
+
+interface Toast {
+  id: string;
+  type: "success" | "error" | "info";
+  message: string;
+}
+
+const ToastContainer = ({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) => (
+  <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2">
+    {toasts.map((t) => (
+      <div
+        key={t.id}
+        className={`flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm animate-in slide-in-from-right-5 ${
+          t.type === "success"
+            ? "border-cat-commits/30 bg-[rgba(0,196,113,0.08)] text-cat-commits"
+            : t.type === "error"
+              ? "border-cat-casual/30 bg-[rgba(255,107,53,0.08)] text-cat-casual"
+              : "border-cat-signal/30 bg-[rgba(6,182,212,0.08)] text-cat-signal"
+        }`}
+      >
+        {t.type === "success" ? <CheckCircle2 size={18} className="mt-0.5 shrink-0" /> :
+         t.type === "error" ? <AlertCircle size={18} className="mt-0.5 shrink-0" /> :
+         <RefreshCw size={18} className="mt-0.5 shrink-0 animate-spin" />}
+        <span className="max-w-xs text-sm font-medium leading-snug">{t.message}</span>
+        <button onClick={() => onDismiss(t.id)} className="shrink-0 rounded p-0.5 transition-colors hover:bg-black/10">
+          <X size={14} />
+        </button>
+      </div>
+    ))}
+  </div>
+);
+
+/* ───── Main ───── */
 
 const CATEGORIES = ["commits", "articles", "casual", "signal", "hallucination"] as const;
 
@@ -18,7 +53,21 @@ const AdminPostsPage = () => {
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [categoryModal, setCategoryModal] = useState<string[] | null>(null);
   const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const addToast = useCallback((type: Toast["type"], message: string) => {
+    const id = crypto.randomUUID();
+    setToasts((prev) => [...prev, { id, type, message }]);
+    if (type !== "info") {
+      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
+    }
+    return id;
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -79,26 +128,17 @@ const AdminPostsPage = () => {
     }
   };
 
-  const handleRegenerate = async (id: string) => {
-    if (!confirm("이 글을 AI로 재생성하시겠습니까? (1~2분 소요)")) return;
+  const regenerateOne = async (id: string): Promise<{ ok: boolean; upgraded?: boolean; prev?: number | null; next?: number; error?: string }> => {
     setRegenerating((prev) => new Set(prev).add(id));
-    setMenuOpen(null);
     try {
       const res = await fetch(`/api/admin/posts/${id}/regenerate`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        const d = data.data;
-        alert(
-          d.upgraded
-            ? `재생성 성공! 점수: ${d.previousScore} → ${d.newScore}\n카테고리: signal로 승격`
-            : `재생성 완료. 점수: ${d.previousScore} → ${d.newScore}\n아직 검수 미통과 (${d.issues.length}개 이슈)`
-        );
-        fetchPosts();
-      } else {
-        alert("재생성 실패: " + data.error);
+        return { ok: true, upgraded: data.data.upgraded, prev: data.data.previousScore, next: data.data.newScore };
       }
+      return { ok: false, error: data.error };
     } catch {
-      alert("재생성 중 오류가 발생했습니다.");
+      return { ok: false, error: "네트워크 오류" };
     } finally {
       setRegenerating((prev) => {
         const next = new Set(prev);
@@ -108,11 +148,43 @@ const AdminPostsPage = () => {
     }
   };
 
+  const handleRegenerate = async (id: string) => {
+    if (!confirm("이 글을 AI로 재생성하시겠습니까? (1~2분 소요)")) return;
+    setMenuOpen(null);
+    const progressId = addToast("info", "재생성 중...");
+    const result = await regenerateOne(id);
+    removeToast(progressId);
+    if (result.ok) {
+      addToast(
+        result.upgraded ? "success" : "info",
+        result.upgraded
+          ? `재생성 성공! ${result.prev} → ${result.next}점, signal 승격`
+          : `재생성 완료. ${result.prev} → ${result.next}점 (아직 미통과)`
+      );
+    } else {
+      addToast("error", `재생성 실패: ${result.error}`);
+    }
+    fetchPosts();
+  };
+
   const handleBulkRegenerate = async (ids: string[]) => {
     if (!confirm(`${ids.length}개의 글을 AI로 재생성하시겠습니까?`)) return;
-    for (const id of ids) {
-      await handleRegenerate(id);
+    const progressId = addToast("info", `0/${ids.length} 재생성 중...`);
+    let upgraded = 0;
+    let failed = 0;
+    for (let i = 0; i < ids.length; i++) {
+      setToasts((prev) => prev.map((t) => t.id === progressId ? { ...t, message: `${i + 1}/${ids.length} 재생성 중...` } : t));
+      const result = await regenerateOne(ids[i]);
+      if (result.ok && result.upgraded) upgraded++;
+      else if (!result.ok) failed++;
     }
+    removeToast(progressId);
+    addToast(
+      failed === ids.length ? "error" : "success",
+      `재생성 완료: ${ids.length}건 중 ${upgraded}건 승격${failed > 0 ? `, ${failed}건 실패` : ""}`
+    );
+    setSelected(new Set());
+    fetchPosts();
   };
 
   const handleCategoryChange = async (ids: string[], category: string) => {
@@ -392,6 +464,9 @@ const AdminPostsPage = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Toast */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* Category Change Modal */}
       {categoryModal && (
