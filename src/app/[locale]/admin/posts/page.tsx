@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, FolderSync, ListOrdered, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PostMeta } from "@/types";
 
-const CATEGORIES = ["commits", "articles", "casual", "signal"] as const;
+const CATEGORIES = ["commits", "articles", "casual", "signal", "hallucination"] as const;
 
 const AdminPostsPage = () => {
   const router = useRouter();
@@ -17,6 +17,7 @@ const AdminPostsPage = () => {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [categoryModal, setCategoryModal] = useState<string[] | null>(null);
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = useCallback(async () => {
@@ -75,6 +76,42 @@ const AdminPostsPage = () => {
       fetchPosts();
     } catch {
       alert("삭제에 실패했습니다.");
+    }
+  };
+
+  const handleRegenerate = async (id: string) => {
+    if (!confirm("이 글을 AI로 재생성하시겠습니까? (1~2분 소요)")) return;
+    setRegenerating((prev) => new Set(prev).add(id));
+    setMenuOpen(null);
+    try {
+      const res = await fetch(`/api/admin/posts/${id}/regenerate`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        const d = data.data;
+        alert(
+          d.upgraded
+            ? `재생성 성공! 점수: ${d.previousScore} → ${d.newScore}\n카테고리: signal로 승격`
+            : `재생성 완료. 점수: ${d.previousScore} → ${d.newScore}\n아직 검수 미통과 (${d.issues.length}개 이슈)`
+        );
+        fetchPosts();
+      } else {
+        alert("재생성 실패: " + data.error);
+      }
+    } catch {
+      alert("재생성 중 오류가 발생했습니다.");
+    } finally {
+      setRegenerating((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleBulkRegenerate = async (ids: string[]) => {
+    if (!confirm(`${ids.length}개의 글을 AI로 재생성하시겠습니까?`)) return;
+    for (const id of ids) {
+      await handleRegenerate(id);
     }
   };
 
@@ -141,6 +178,16 @@ const AdminPostsPage = () => {
               <FolderSync size={13} />
               카테고리 변경
             </button>
+            {filter === "hallucination" && (
+              <button
+                onClick={() => handleBulkRegenerate(Array.from(selected))}
+                disabled={regenerating.size > 0}
+                className="flex items-center gap-1 rounded-lg border border-cat-signal px-3 py-1.5 text-meta font-medium text-cat-signal transition-colors hover:bg-[rgba(6,182,212,0.12)] disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={regenerating.size > 0 ? "animate-spin" : ""} />
+                재생성
+              </button>
+            )}
             <button
               onClick={() => handleDelete(Array.from(selected))}
               className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-meta font-medium text-cat-casual transition-colors hover:bg-[rgba(255,107,53,0.12)]"
@@ -232,7 +279,19 @@ const AdminPostsPage = () => {
                       {post.title}
                     </a>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-meta text-text-tertiary">{post.category}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-meta text-text-tertiary">
+                    <span className={post.category === "hallucination" ? "text-cat-casual" : ""}>
+                      {post.category}
+                    </span>
+                    {post.validationScore != null && post.validationScore < 80 && (
+                      <span className="ml-1.5 rounded bg-[rgba(255,107,53,0.12)] px-1.5 py-0.5 text-[0.625rem] font-semibold text-cat-casual">
+                        {post.validationScore}점
+                      </span>
+                    )}
+                    {regenerating.has(post.id) && (
+                      <RefreshCw size={12} className="ml-1.5 inline animate-spin text-cat-signal" />
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <button
                       onClick={async () => {
@@ -305,6 +364,16 @@ const AdminPostsPage = () => {
                           <FolderSync size={14} />
                           카테고리 변경
                         </button>
+                        {post.category === "hallucination" && (
+                          <button
+                            onClick={() => handleRegenerate(post.id)}
+                            disabled={regenerating.has(post.id)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-cat-signal transition-colors hover:bg-[rgba(6,182,212,0.12)] disabled:opacity-50"
+                          >
+                            <RefreshCw size={14} className={regenerating.has(post.id) ? "animate-spin" : ""} />
+                            {regenerating.has(post.id) ? "재생성 중..." : "AI 재생성"}
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             handleDelete([post.id]);

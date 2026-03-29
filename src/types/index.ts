@@ -47,6 +47,7 @@ export interface PostMeta {
   filesChanged?: number;
   hasEnglish?: boolean;
   viewCount?: number;
+  validationScore?: number | null;
 }
 
 export interface PostDetail extends PostMeta {

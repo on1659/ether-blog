@@ -36,6 +36,7 @@ export const GET = async (req: NextRequest) => {
           category: true, coverImage: true, tags: true, readingTime: true,
           createdAt: true, published: true, featured: true,
           commitHash: true, commitUrl: true, repoName: true, filesChanged: true,
+          validationScore: true,
         },
       }),
       prisma.post.count({ where }),
