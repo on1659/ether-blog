@@ -167,13 +167,11 @@ export const generateDailyAIPost = async (): Promise<{
     data: { coverImage: `/api/thumbnail/${post.id}` },
   });
 
-  // 검수 통과 시에만 SignalItem 소비 (실패 시 다음 실행에서 재사용)
-  if (validation.passed) {
-    await prisma.signalItem.updateMany({
-      where: { id: { in: topItems.map((i) => i.id) } },
-      data: { usedInPost: post.id },
-    });
-  }
+  // SignalItem 소비 처리 (실패해도 소비 — 미소비 시 같은 아이템으로 무한 재생성됨)
+  await prisma.signalItem.updateMany({
+    where: { id: { in: topItems.map((i) => i.id) } },
+    data: { usedInPost: post.id },
+  });
 
   // 검수 통과 시에만 캐시 갱신
   if (validation.passed) {
