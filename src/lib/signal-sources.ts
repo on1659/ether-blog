@@ -44,6 +44,20 @@ export const RSS_FEEDS = [
   // Note: Anthropic — RSS 미제공, fetch-ai-news.ts에서 HTML 스크래핑으로 수집
 ];
 
+/* ───── Claude/Anthropic 전용 소스 ───── */
+
+export const CLAUDE_RSS_FEEDS = [
+  { name: "Anthropic Engineering", url: "https://www.anthropic.com/engineering/rss" },
+  { name: "Anthropic Research", url: "https://www.anthropic.com/research/rss" },
+];
+
+export const CLAUDE_KEYWORDS = [
+  "claude", "anthropic", "claude code", "claude sonnet", "claude opus",
+  "claude haiku", "mcp", "model context protocol", "artifacts",
+  "claude api", "claude desktop", "claude mobile",
+  "constitutional ai", "rlhf", "claude 4", "claude 3",
+];
+
 /* ───── AI 키워드 필터 ───── */
 
 export const AI_KEYWORDS = (process.env.AI_KEYWORDS ?? "AI,LLM,GPT,Claude,Anthropic,OpenAI,Gemini,agent,RAG,transformer,fine-tuning")

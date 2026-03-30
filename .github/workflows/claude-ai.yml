@@ -1,0 +1,43 @@
+name: Claude AI Post
+
+on:
+  schedule:
+    # 매시간 실행 (UTC) — :15분에 실행 (daily-ai와 겹치지 않게)
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger Claude AI Post
+        run: |
+          echo "🤖 Triggering Claude AI Post..."
+          echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://radarlog.kr/api/v1/daily-ai/claude-trigger" \
+            -H "Authorization: Bearer ${{ secrets.BLOG_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            --max-time 300)
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "HTTP Status: $http_code"
+          echo "Response Body: $body"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          if echo "$body" | grep -q '"skipped":true'; then
+            reason=$(echo "$body" | grep -o '"reason":"[^"]*"' | head -1)
+            echo "⏭️ Skipped: $reason"
+          elif echo "$body" | grep -q '"postId"'; then
+            echo "✅ New Claude post created!"
+          fi
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::API call failed with status $http_code: $body"
+            exit 1
+          fi

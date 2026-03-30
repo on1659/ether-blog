@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 import { prisma, nextSlug } from "./prisma";
 import { calculateReadingTime } from "./markdown";
-import { fetchAINews } from "./fetch-ai-news";
+import { fetchAINews, fetchClaudeNews } from "./fetch-ai-news";
 import { getAIConfig } from "./claude";
 import { getWritingStyle, buildSystemPrompt } from "@/config/writing-style";
 import { validatePost, logValidation, buildFailureBanner } from "./post-validator";
@@ -18,6 +18,7 @@ const SIGNAL_RESPONSE_FORMAT = `반드시 JSON으로 응답:
 }`;
 
 const HOURLY_CAP = 6;
+const ITEMS_PER_POST = 5; // 15개 수집 → 5개씩 3글로 분산 (매 트리거마다 1글)
 
 export const generateDailyAIPost = async (): Promise<{
   postId: string | null;
@@ -58,8 +59,10 @@ export const generateDailyAIPost = async (): Promise<{
     return { postId: null, skipped: true, reason: `Only ${freshItems.length} fresh items (need at least 2)` };
   }
 
-  // 슬롯제 재적용 (DB에서 가져온 fresh items 기준)
-  const topItems = selectFreshBySlots(freshItems);
+  // 상위 ITEMS_PER_POST개만 선택 (나머지는 다음 트리거에서 사용)
+  const topItems = freshItems
+    .sort((a, b) => b.score - a.score)
+    .slice(0, ITEMS_PER_POST);
 
   // AI로 글 생성 (공통 글쓰기 스타일 사용)
   const { baseURL, apiKey, model } = await getAIConfig();
@@ -255,4 +258,186 @@ const selectFreshBySlots = (items: SignalItemRow[]): SignalItemRow[] => {
   }
 
   return selected;
+};
+
+/* ───── Claude/Anthropic 전용 글 생성 ───── */
+
+const CLAUDE_RESPONSE_FORMAT = `반드시 JSON으로 응답:
+{
+  "title": "Claude/Anthropic 업데이트: 핵심 요약",
+  "content": "마크다운 본문 (Claude/Anthropic 중심 분석)",
+  "titleEn": "English title",
+  "contentEn": "English markdown body",
+  "tags": ["Claude", "Anthropic", "태그3"]
+}`;
+
+export const generateClaudePost = async (): Promise<{
+  postId: string | null;
+  skipped: boolean;
+  reason?: string;
+}> => {
+  // 2시간 내 Claude 태그 글이 있으면 스킵
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const recentClaude = await prisma.post.count({
+    where: {
+      category: "signal",
+      createdAt: { gte: twoHoursAgo },
+      tags: { hasSome: ["Claude", "Anthropic"] },
+    },
+  });
+
+  if (recentClaude >= 1) {
+    return { postId: null, skipped: true, reason: `Claude post exists within 2h (${recentClaude})` };
+  }
+
+  // Claude 전용 소스 수집
+  const news = await fetchClaudeNews();
+
+  if (news.length === 0) {
+    return { postId: null, skipped: true, reason: "No Claude/Anthropic news found" };
+  }
+
+  // SignalItem upsert
+  await upsertSignalItems(news);
+
+  // DB에서 Claude/Anthropic 관련 미사용 아이템 조회
+  const freshItems = await prisma.signalItem.findMany({
+    where: {
+      usedInPost: null,
+      fetchedAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) },
+      OR: [
+        { source: { contains: "Anthropic" } },
+        { source: { contains: "Claude" } },
+        { title: { contains: "Claude", mode: "insensitive" } },
+        { title: { contains: "Anthropic", mode: "insensitive" } },
+        { title: { contains: "MCP", mode: "insensitive" } },
+      ],
+    },
+    orderBy: { score: "desc" },
+    take: 10,
+  });
+
+  if (freshItems.length < 1) {
+    return { postId: null, skipped: true, reason: `Only ${freshItems.length} Claude-related fresh items` };
+  }
+
+  const topItems = freshItems.slice(0, 5);
+
+  // AI로 글 생성
+  const { baseURL, apiKey, model } = await getAIConfig();
+  const client = new OpenAI({ apiKey, baseURL });
+
+  const style = await getWritingStyle("signal");
+  const systemPrompt = buildSystemPrompt(style, CLAUDE_RESPONSE_FORMAT, model);
+
+  const newsContext = topItems
+    .map((n, i) => `${i + 1}. [${n.source}] ${n.title}\n   URL: ${n.url}\n   Score: ${n.score}${n.summary ? `\n   Summary: ${n.summary.slice(0, 200)}` : ""}`)
+    .join("\n\n");
+
+  const response = await client.chat.completions.create({
+    model,
+    max_tokens: 6000,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Claude/Anthropic 관련 최신 뉴스입니다 (${topItems.length}건). Claude와 Anthropic 중심으로 분석하는 업데이트 글을 작성해주세요. 기술적 의미와 개발자에게 미치는 영향을 중점적으로 다뤄주세요.\n\n${newsContext}\n\nJSON으로 응답해.`,
+      },
+    ],
+  });
+
+  const text = response.choices[0]?.message?.content ?? "";
+  let jsonMatch = text.match(/\{[\s\S]*\}/);
+
+  if (!jsonMatch) {
+    const retry = await client.chat.completions.create({
+      model,
+      max_tokens: 6000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: "아래 텍스트를 JSON 형식으로 변환하라. 다른 설명 없이 JSON만 출력하라." },
+        { role: "user", content: `다음 글을 이 JSON 형식으로 변환해:\n${CLAUDE_RESPONSE_FORMAT}\n\n---\n\n${text}` },
+      ],
+    });
+    const retryText = retry.choices[0]?.message?.content ?? "";
+    jsonMatch = retryText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse Claude post AI response as JSON after retry");
+    }
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
+
+  const usage = response.usage;
+  const tokenBadge = usage
+    ? `> 🤖 \`${usage.prompt_tokens} in / ${usage.completion_tokens} out / ${usage.total_tokens} total tokens\`\n\n`
+    : "";
+
+  const content = tokenBadge + parsed.content;
+  const contentEn = parsed.contentEn ? tokenBadge + parsed.contentEn : null;
+
+  const slug = await nextSlug();
+  const readingTime = calculateReadingTime(content);
+  const excerpt = content.replace(/[#*`>\[\]]/g, "").slice(0, 200);
+  const excerptEn = contentEn ? contentEn.replace(/[#*`>\[\]]/g, "").slice(0, 200) : null;
+
+  const validation = await validatePost({
+    content,
+    title: parsed.title,
+    minLength: 500,
+    maxLength: 8000,
+    requireSources: true,
+    checkHallucination: true,
+    sourceContext: newsContext,
+  });
+
+  const finalContent = validation.passed ? content : buildFailureBanner(validation) + content;
+  const finalContentEn = validation.passed ? contentEn : (contentEn ? buildFailureBanner(validation) + contentEn : contentEn);
+
+  const tags = [...new Set(["Claude", "Anthropic", ...(parsed.tags || [])])];
+
+  const post = await prisma.post.create({
+    data: {
+      title: parsed.title,
+      titleEn: parsed.titleEn || null,
+      content: finalContent,
+      contentEn: finalContentEn,
+      excerpt,
+      excerptEn,
+      slug,
+      category: validation.passed ? "signal" : "hallucination",
+      tags: validation.passed ? tags : [...tags, "검수실패"],
+      readingTime,
+      published: true,
+      validationScore: validation.score,
+      validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+      validatedAt: new Date(),
+    },
+  });
+
+  logValidation(post.id, validation);
+
+  await prisma.post.update({
+    where: { id: post.id },
+    data: { coverImage: `/api/thumbnail/${post.id}` },
+  });
+
+  await prisma.signalItem.updateMany({
+    where: { id: { in: topItems.map((i) => i.id) } },
+    data: { usedInPost: post.id },
+  });
+
+  if (validation.passed) {
+    try {
+      revalidatePath("/");
+      revalidatePath("/signal");
+    } catch {
+      console.error("Revalidation failed");
+    }
+  }
+
+  console.log(`Generated Claude post: ${post.id} (${topItems.length} items, validation: ${validation.passed ? "PASS" : "FAIL"} score=${validation.score})`);
+
+  return { postId: post.id, skipped: false };
 };

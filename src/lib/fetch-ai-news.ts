@@ -5,6 +5,8 @@ import {
   matchesKeyword,
   REDDIT_SUBS,
   RSS_FEEDS,
+  CLAUDE_RSS_FEEDS,
+  CLAUDE_KEYWORDS,
   MAX_ITEMS_PER_SOURCE,
   SLOT_CONFIG,
   TOTAL_SLOTS,
@@ -421,6 +423,58 @@ const dedup = (items: RawSignalItem[]): RawSignalItem[] => {
   return [...seen.values()];
 };
 
+/* ───── 7. Claude/Anthropic 전용 RSS ───── */
+
+const fetchClaudeRSS = async (): Promise<RawSignalItem[]> => {
+  const parser = new Parser({ timeout: 10000 });
+  const results: RawSignalItem[] = [];
+
+  const feedResults = await Promise.allSettled(
+    CLAUDE_RSS_FEEDS.map(async (feed) => {
+      const parsed = await parser.parseURL(feed.url);
+      return { feed, items: parsed.items ?? [] };
+    })
+  );
+
+  for (const result of feedResults) {
+    if (result.status === "rejected") {
+      console.error("Claude RSS fetch failed:", result.reason);
+      continue;
+    }
+    const { feed, items } = result.value;
+    for (const item of items.slice(0, 10)) {
+      const pubDate = item.isoDate ?? item.pubDate;
+      if (!pubDate) continue;
+      const url = item.link ?? "";
+      if (!url) continue;
+
+      const ageHours = (Date.now() - new Date(pubDate).getTime()) / (1000 * 60 * 60);
+      const recencyScore = ageHours <= 24 ? 200 : ageHours <= 48 ? 150 : ageHours <= 168 ? 100 : 50;
+
+      results.push({
+        externalId: makeExternalId(`claude-rss-${feed.name}`, url),
+        canonicalUrl: extractCanonicalUrl(url, `Claude: ${feed.name}`),
+        source: `Claude: ${feed.name}`,
+        sourceType: "industry",
+        title: item.title ?? "Untitled",
+        url,
+        score: recencyScore,
+        createdAt: pubDate,
+        summary: item.contentSnippet?.slice(0, 500) || undefined,
+      });
+    }
+  }
+
+  return results;
+};
+
+/* ───── Claude 키워드 매칭 (일반 소스에서 Claude 관련 필터) ───── */
+
+const matchesClaudeKeyword = (text: string): boolean => {
+  const lower = text.toLowerCase();
+  return CLAUDE_KEYWORDS.some((kw) => lower.includes(kw));
+};
+
 /* ───── 메인: 전체 소스 병렬 수집 ───── */
 
 export const fetchAINews = async (): Promise<RawSignalItem[]> => {
@@ -453,4 +507,35 @@ export const fetchAINews = async (): Promise<RawSignalItem[]> => {
   );
 
   return selected;
+};
+
+/* ───── Claude 전용 수집: Anthropic 소스 + 일반 소스에서 Claude 관련 필터 ───── */
+
+export const fetchClaudeNews = async (): Promise<RawSignalItem[]> => {
+  const [anthropic, claudeRss, hn, reddit, rss] = await Promise.all([
+    fetchAnthropicNews(),
+    fetchClaudeRSS(),
+    fetchHackerNews(),
+    fetchReddit(),
+    fetchRSSFeeds(),
+  ]);
+
+  // Anthropic 전용 소스는 전부 포함
+  const dedicated = [...anthropic, ...claudeRss];
+
+  // 일반 소스에서 Claude/Anthropic 관련만 필터
+  const generalClaude = [...hn, ...reddit, ...rss].filter(
+    (item) => matchesClaudeKeyword(item.title) || (item.summary && matchesClaudeKeyword(item.summary))
+  );
+
+  const all = [...dedicated, ...generalClaude];
+  const deduped = dedup(all);
+
+  console.log(
+    `[Claude News] Collected: Anthropic=${anthropic.length}, ClaudeRSS=${claudeRss.length}, ` +
+    `GeneralClaude=${generalClaude.length}, Total=${all.length}, After dedup=${deduped.length}`
+  );
+
+  // 점수 내림차순, 최대 10개
+  return deduped.sort((a, b) => b.score - a.score).slice(0, 10);
 };
