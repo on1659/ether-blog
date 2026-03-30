@@ -47,8 +47,10 @@ export const RSS_FEEDS = [
 /* ───── Claude/Anthropic 전용 소스 ───── */
 
 export const CLAUDE_RSS_FEEDS = [
-  { name: "Anthropic Engineering", url: "https://www.anthropic.com/engineering/rss" },
-  { name: "Anthropic Research", url: "https://www.anthropic.com/research/rss" },
+  // Anthropic은 공식 RSS 미제공 — 대신 Claude 관련 일반 RSS 활용
+  { name: "Simon Willison Claude", url: "https://simonwillison.net/atom/everything/" },
+  { name: "Ars Technica AI", url: "https://feeds.arstechnica.com/arstechnica/technology-lab" },
+  { name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
 ];
 
 export const CLAUDE_KEYWORDS = [

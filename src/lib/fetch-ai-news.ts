@@ -219,8 +219,8 @@ interface AnthropicArticle {
 
 /**
  * Anthropic 뉴스 스크래퍼
- * anthropic.com/news의 Next.js RSC payload에서 기사 추출
- * 구조: "publishedOn":"ISO", "slug":{"_type":"slug","current":"xxx"}, "title":"xxx", "summary":"xxx"
+ * anthropic.com/news의 인라인 JSON에서 기사 추출
+ * 실제 HTML 이스케이프 패턴: publishedOn\":\"ISO\", slug\":{\"_type\":\"slug\",\"current\":\"xxx\"}
  */
 const fetchAnthropicNews = async (): Promise<RawSignalItem[]> => {
   try {
@@ -234,48 +234,72 @@ const fetchAnthropicNews = async (): Promise<RawSignalItem[]> => {
 
     const html = await res.text();
 
-    // RSC payload에서 JSON 데이터 추출 (이중 이스케이프 처리)
-    const scripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)];
-    const rawPayload = scripts.map((m) => m[1]).find((s) => s.length > 50000) ?? "";
-
-    if (!rawPayload) {
-      console.warn("Anthropic News: No large script payload found");
-      return [];
+    // 이스케이프된 slug에서 직접 추출: current\":\"slug-name
+    const slugPattern = /current\\":\\"([a-z0-9-]+)/g;
+    const slugs: string[] = [];
+    let slugMatch;
+    while ((slugMatch = slugPattern.exec(html)) !== null) {
+      if (!slugs.includes(slugMatch[1])) slugs.push(slugMatch[1]);
     }
 
-    // 이중 이스케이프 제거: \\\" → ", \\\\ → (skip)
-    const payload = rawPayload.replace(/\\\\"/g, '"').replace(/\\"/g, '"');
+    // 이스케이프된 publishedOn 추출: publishedOn\":\"2026-03-12T14:39:00.000Z
+    const pubPattern = /publishedOn\\":\\"(\d{4}-\d{2}-\d{2}T[^\\]+)/g;
+    const dates: string[] = [];
+    let pubMatch;
+    while ((pubMatch = pubPattern.exec(html)) !== null) {
+      dates.push(pubMatch[1]);
+    }
 
-    // 기사 패턴: "publishedOn" + "slug"{"current":"xxx"} + "summary" + "title"
+    // 이스케이프된 title 추출 — slug 근처에서 title 찾기
+    // 전체 HTML에서 slug 위치 기반으로 청크 추출 후 매칭
     const articles: AnthropicArticle[] = [];
     const seen = new Set<string>();
 
-    // publishedOn 위치를 기준으로 각 기사 청크 추출
-    const pubPattern = /"publishedOn":"(\d{4}-\d{2}-\d{2}T[^"]+)"/g;
-    let pubMatch;
-    while ((pubMatch = pubPattern.exec(payload)) !== null) {
-      const start = Math.max(0, pubMatch.index - 500);
-      const end = Math.min(payload.length, pubMatch.index + 500);
-      const chunk = payload.slice(start, end);
+    for (const slug of slugs) {
+      const slugIdx = html.indexOf(`current\\":\\"${slug}\\"`);
+      if (slugIdx === -1) continue;
 
-      const slugM = chunk.match(/"slug":\{"_type":"slug","current":"([^"]+)"\}/);
-      const titleM = chunk.match(/"title":"([^"]{5,200})"/);
-      const summaryM = chunk.match(/"summary":"([^"]{0,500})"/);
+      // slug 주변 2000자에서 publishedOn, title 추출
+      const start = Math.max(0, slugIdx - 1000);
+      const end = Math.min(html.length, slugIdx + 1000);
+      const chunk = html.slice(start, end);
 
-      if (slugM && titleM && !seen.has(slugM[1])) {
-        seen.add(slugM[1]);
+      const datM = chunk.match(/publishedOn\\":\\"(\d{4}-\d{2}-\d{2}T[^\\]+)/);
+      const titleM = chunk.match(/title\\":\\"([^\\]{5,200})/);
+
+      if (datM && titleM && !seen.has(slug)) {
+        seen.add(slug);
         articles.push({
-          publishedOn: pubMatch[1],
-          slug: slugM[1],
+          publishedOn: datM[1],
+          slug,
           title: titleM[1],
-          summary: summaryM?.[1],
+          summary: undefined,
         });
+      }
+    }
+
+    // title이 없는 경우를 위한 폴백: publishedOn 기준 매칭
+    if (articles.length === 0 && dates.length > 0 && slugs.length > 0) {
+      console.warn(`[Anthropic News] Slug-based extraction failed, trying positional fallback`);
+      const count = Math.min(dates.length, slugs.length);
+      for (let i = 0; i < count; i++) {
+        if (!seen.has(slugs[i])) {
+          seen.add(slugs[i]);
+          // slug를 제목으로 사용 (kebab → Title Case)
+          const title = slugs[i].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          articles.push({
+            publishedOn: dates[i],
+            slug: slugs[i],
+            title,
+            summary: undefined,
+          });
+        }
       }
     }
 
     console.log(`[Anthropic News] Found ${articles.length} articles`);
 
-    // 30일 이내 기사 — 사소한 업데이트도 포함
+    // 30일 이내 기사
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     return articles
@@ -284,7 +308,6 @@ const fetchAnthropicNews = async (): Promise<RawSignalItem[]> => {
       .map((a) => {
         const url = `https://www.anthropic.com/news/${a.slug}`;
         const ageHours = (Date.now() - new Date(a.publishedOn).getTime()) / (1000 * 60 * 60);
-        // Anthropic 뉴스는 우선 수집 — 높은 기본 점수
         const recencyScore = ageHours <= 24 ? 200 : ageHours <= 48 ? 150 : ageHours <= 168 ? 100 : 50;
 
         return {
