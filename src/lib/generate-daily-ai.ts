@@ -292,30 +292,33 @@ export const generateClaudePost = async (): Promise<{
 
   // Claude 전용 소스 수집
   const news = await fetchClaudeNews();
+  console.log(`[Claude Post] fetchClaudeNews returned ${news.length} items`);
 
   if (news.length === 0) {
     return { postId: null, skipped: true, reason: "No Claude/Anthropic news found" };
   }
 
-  // SignalItem upsert
+  // SignalItem upsert — Claude 전용 externalId로 저장 (일반 파이프라인과 분리)
+  for (const item of news) {
+    // Claude 전용 prefix로 externalId 보장 — 일반 파이프라인에서 소비되지 않도록
+    if (!item.externalId.startsWith("claude:")) {
+      item.externalId = `claude:${item.externalId}`;
+    }
+  }
   await upsertSignalItems(news);
 
-  // DB에서 Claude/Anthropic 관련 미사용 아이템 조회
+  // DB에서 Claude 전용 미사용 아이템 조회 (externalId prefix 기반)
   const freshItems = await prisma.signalItem.findMany({
     where: {
       usedInPost: null,
       fetchedAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) },
-      OR: [
-        { source: { contains: "Anthropic" } },
-        { source: { contains: "Claude" } },
-        { title: { contains: "Claude", mode: "insensitive" } },
-        { title: { contains: "Anthropic", mode: "insensitive" } },
-        { title: { contains: "MCP", mode: "insensitive" } },
-      ],
+      externalId: { startsWith: "claude:" },
     },
     orderBy: { score: "desc" },
     take: 10,
   });
+
+  console.log(`[Claude Post] Fresh Claude items in DB: ${freshItems.length}`);
 
   if (freshItems.length < 1) {
     return { postId: null, skipped: true, reason: `Only ${freshItems.length} Claude-related fresh items` };
