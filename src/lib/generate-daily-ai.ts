@@ -386,6 +386,7 @@ export const generateClaudePost = async (): Promise<{
   let jsonMatch = text.match(/\{[\s\S]*\}/);
 
   if (!jsonMatch) {
+    console.warn(`[Claude Post] JSON parse failed, retrying...`);
     const retry = await client.chat.completions.create({
       model,
       max_tokens: 6000,
@@ -397,19 +398,25 @@ export const generateClaudePost = async (): Promise<{
     });
     const retryText = retry.choices[0]?.message?.content ?? "";
     jsonMatch = retryText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Failed to parse Claude post AI response as JSON after retry");
-    }
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  // JSON 파싱 실패 시에도 fallback으로 글 생성
+  const parsed = jsonMatch
+    ? JSON.parse(jsonMatch[0])
+    : {
+        title: `Claude & Anthropic 업데이트 — ${new Date().toLocaleDateString("ko-KR")}`,
+        content: text || topItems.map((n) => `## ${n.title}\n\n${n.summary || ""}\n\n🔗 ${n.url}`).join("\n\n---\n\n"),
+        titleEn: `Claude & Anthropic Update — ${new Date().toLocaleDateString("en-US")}`,
+        contentEn: null,
+        tags: ["Claude", "Anthropic"],
+      };
 
   const usage = response.usage;
   const tokenBadge = usage
     ? `> 🤖 \`${usage.prompt_tokens} in / ${usage.completion_tokens} out / ${usage.total_tokens} total tokens\`\n\n`
     : "";
 
-  const content = tokenBadge + parsed.content;
+  const content = tokenBadge + (parsed.content || "");
   const contentEn = parsed.contentEn ? tokenBadge + parsed.contentEn : null;
 
   const slug = await nextSlug();
