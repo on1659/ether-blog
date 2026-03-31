@@ -295,19 +295,44 @@ export const generateClaudePost = async (): Promise<{
   console.log(`[Claude Post] fetchClaudeNews returned ${news.length} items`);
 
   if (news.length === 0) {
-    return { postId: null, skipped: true, reason: "No Claude/Anthropic news found" };
+    return { postId: null, skipped: true, reason: "No Claude/Anthropic news found from any source" };
   }
 
   // SignalItem upsert — Claude 전용 externalId로 저장 (일반 파이프라인과 분리)
   for (const item of news) {
-    // Claude 전용 prefix로 externalId 보장 — 일반 파이프라인에서 소비되지 않도록
     if (!item.externalId.startsWith("claude:")) {
       item.externalId = `claude:${item.externalId}`;
     }
   }
-  await upsertSignalItems(news);
 
-  // DB에서 Claude 전용 미사용 아이템 조회 (externalId prefix 기반)
+  let upsertOk = 0;
+  let upsertFail = 0;
+  for (const item of news) {
+    try {
+      await prisma.signalItem.upsert({
+        where: { externalId: item.externalId },
+        create: {
+          externalId: item.externalId,
+          canonicalUrl: item.canonicalUrl,
+          source: item.source,
+          sourceType: item.sourceType,
+          title: item.title,
+          url: item.url,
+          score: item.score,
+          summary: item.summary,
+          fetchedAt: new Date(),
+        },
+        update: { score: item.score },
+      });
+      upsertOk++;
+    } catch (e) {
+      upsertFail++;
+      console.error(`[Claude Post] upsert failed: ${item.externalId}`, e);
+    }
+  }
+  console.log(`[Claude Post] Upsert: ${upsertOk} ok, ${upsertFail} fail`);
+
+  // DB에서 Claude 전용 미사용 아이템 조회
   const freshItems = await prisma.signalItem.findMany({
     where: {
       usedInPost: null,
@@ -318,10 +343,17 @@ export const generateClaudePost = async (): Promise<{
     take: 10,
   });
 
-  console.log(`[Claude Post] Fresh Claude items in DB: ${freshItems.length}`);
+  console.log(`[Claude Post] Fresh items: ${freshItems.length}, titles: ${freshItems.map((i) => i.title.slice(0, 40)).join(" | ")}`);
 
   if (freshItems.length < 1) {
-    return { postId: null, skipped: true, reason: `Only ${freshItems.length} Claude-related fresh items` };
+    // 디버그: upsert 결과 + DB 상태를 reason에 포함
+    const allClaude = await prisma.signalItem.count({ where: { externalId: { startsWith: "claude:" } } });
+    const usedClaude = await prisma.signalItem.count({ where: { externalId: { startsWith: "claude:" }, usedInPost: { not: null } } });
+    return {
+      postId: null,
+      skipped: true,
+      reason: `0 fresh Claude items (fetched=${news.length}, upsertOk=${upsertOk}, upsertFail=${upsertFail}, dbTotal=${allClaude}, dbUsed=${usedClaude})`,
+    };
   }
 
   const topItems = freshItems.slice(0, 5);
