@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { prisma, nextSlug } from "./prisma";
+import { prisma, nextSlug, createPostWithSlug } from "./prisma";
 import { getCommitDetail } from "./github";
 import { generateBlogContent } from "./claude";
 import { calculateReadingTime } from "./markdown";
@@ -118,28 +118,26 @@ export const processCommits = async (
       const finalContent = validation.passed ? content : buildFailureBanner(validation) + content;
       const finalContentEn = validation.passed ? contentEn : (contentEn ? buildFailureBanner(validation) + contentEn : contentEn);
 
-      const post = await prisma.post.create({
-        data: {
-          title,
-          titleEn: titleEn || null,
-          content: finalContent,
-          contentEn: finalContentEn || null,
-          excerpt,
-          excerptEn,
-          slug,
-          category: validation.passed ? "commits" : "hallucination",
-          tags: validation.passed ? tags : [...tags, "검수실패"],
-          readingTime,
-          published: shouldPublish,
-          validationScore: validation.score,
-          validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
-          validatedAt: new Date(),
-          commitHash: commit.id,
-          commitUrl: detail.url,
-          repoName: repo,
-          projectSlug: repo.toLowerCase(),
-          filesChanged: detail.files.length,
-        },
+      const post = await createPostWithSlug({
+        title,
+        titleEn: titleEn || null,
+        content: finalContent,
+        contentEn: finalContentEn || null,
+        excerpt,
+        excerptEn,
+        slug,
+        category: validation.passed ? "commits" : "hallucination",
+        tags: validation.passed ? tags : [...tags, "검수실패"],
+        readingTime,
+        published: shouldPublish,
+        validationScore: validation.score,
+        validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+        validatedAt: new Date(),
+        commitHash: commit.id,
+        commitUrl: detail.url,
+        repoName: repo,
+        projectSlug: repo.toLowerCase(),
+        filesChanged: detail.files.length,
       });
 
       logValidation(post.id, validation);

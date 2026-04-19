@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
-import { prisma, nextSlug } from "./prisma";
+import { prisma, nextSlug, createPostWithSlug } from "./prisma";
 import { calculateReadingTime } from "./markdown";
 import { fetchAINews, fetchClaudeNews } from "./fetch-ai-news";
 import { getAIConfig } from "./claude";
@@ -143,23 +143,21 @@ export const generateDailyAIPost = async (): Promise<{
   const finalContent = validation.passed ? content : buildFailureBanner(validation) + content;
   const finalContentEn = validation.passed ? contentEn : (contentEn ? buildFailureBanner(validation) + contentEn : contentEn);
 
-  const post = await prisma.post.create({
-    data: {
-      title: parsed.title,
-      titleEn: parsed.titleEn || null,
-      content: finalContent,
-      contentEn: finalContentEn,
-      excerpt,
-      excerptEn,
-      slug,
-      category: validation.passed ? "signal" : "hallucination",
-      tags: validation.passed ? (parsed.tags || ["AI", "Daily"]) : [...(parsed.tags || ["AI", "Daily"]), "검수실패"],
-      readingTime,
-      published: true,
-      validationScore: validation.score,
-      validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
-      validatedAt: new Date(),
-    },
+  const post = await createPostWithSlug({
+    title: parsed.title,
+    titleEn: parsed.titleEn || null,
+    content: finalContent,
+    contentEn: finalContentEn,
+    excerpt,
+    excerptEn,
+    slug,
+    category: validation.passed ? "signal" : "hallucination",
+    tags: validation.passed ? (parsed.tags || ["AI", "Daily"]) : [...(parsed.tags || ["AI", "Daily"]), "검수실패"],
+    readingTime,
+    published: true,
+    validationScore: validation.score,
+    validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+    validatedAt: new Date(),
   });
 
   logValidation(post.id, validation);
@@ -439,23 +437,21 @@ export const generateClaudePost = async (): Promise<{
 
   const tags = [...new Set(["Claude", "Anthropic", ...(parsed.tags || [])])];
 
-  const post = await prisma.post.create({
-    data: {
-      title: parsed.title,
-      titleEn: parsed.titleEn || null,
-      content: finalContent,
-      contentEn: finalContentEn,
-      excerpt,
-      excerptEn,
-      slug,
-      category: validation.passed ? "signal" : "hallucination",
-      tags: validation.passed ? tags : [...tags, "검수실패"],
-      readingTime,
-      published: true,
-      validationScore: validation.score,
-      validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
-      validatedAt: new Date(),
-    },
+  const post = await createPostWithSlug({
+    title: parsed.title,
+    titleEn: parsed.titleEn || null,
+    content: finalContent,
+    contentEn: finalContentEn,
+    excerpt,
+    excerptEn,
+    slug,
+    category: validation.passed ? "signal" : "hallucination",
+    tags: validation.passed ? tags : [...tags, "검수실패"],
+    readingTime,
+    published: true,
+    validationScore: validation.score,
+    validationIssues: validation.issues.length > 0 ? JSON.stringify(validation.issues) : null,
+    validatedAt: new Date(),
   });
 
   logValidation(post.id, validation);
